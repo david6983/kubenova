@@ -1,8 +1,8 @@
 # KubeBoat
 
-**Kubernetes monitoring reimagined as a 3D military fleet.**
+**Kubernetes monitoring reimagined as a 3D space fleet.**
 
-Instead of dashboards and graphs, you command a fleet — nodes are warships, pods are fighter craft flying in squadron formations around each ship. The captain announces alerts. Weather intensity reflects cluster health. When pods crash, they explode on deck.
+Instead of dashboards and graphs, you command an armada — nodes are capital ships, pods are fighter craft flying in squadron formations around each vessel. The captain announces alerts. Nebula storm intensity reflects cluster health. When pods crash, they explode in the void.
 
 > This is an early preview. The core 3D visualization works and the eBPF agent is functional. A lot is still being built.
 
@@ -16,13 +16,13 @@ KubeBoat makes cluster state **readable at a glance**. You see it. You feel it.
 
 | KubeBoat | Kubernetes |
 |---|---|
-| The sea | Infrastructure / cloud |
+| Deep space | Infrastructure / cloud |
 | A fleet | A cluster |
-| The flagship | Control plane |
-| Warships | Worker nodes |
+| The command ship | Control plane |
+| Capital ships | Worker nodes |
 | Fighter craft | Pods |
-| Weather storm | Cluster health |
-| Crew on deck | Your ops team |
+| Nebula storm | Cluster health |
+| Crew aboard | Your ops team |
 
 ---
 
@@ -117,10 +117,10 @@ The eBPF agent attaches TC egress hooks to every pod veth interface, maintains a
 ## Roadmap
 
 ### Step 1 — Observe (in progress)
-- [x] 3D fleet: nodes as warships, pods as fighter craft in formations
+- [x] 3D space fleet: nodes as capital ships, pods as fighter craft in formations
 - [x] East-West traffic flows between ships
-- [x] North-South inbound traffic (missiles from the fog)
-- [x] Weather system: storm intensity = cluster health
+- [x] North-South inbound traffic (fire from deep space)
+- [x] Nebula storm system: storm intensity = cluster health
 - [x] HUD: namespace legend, alert log, node detail panel
 - [x] Real eBPF agent: pod CPU/mem + network flows
 - [x] Demo cluster with realistic workloads and live traffic
@@ -128,19 +128,19 @@ The eBPF agent attaches TC egress hooks to every pod veth interface, maintains a
 - [ ] Wire real eBPF flows into traffic visualization
 
 ### Step 2 — Explore
-- [ ] Interior ship view: each room = a pod
-- [ ] Ops crew on deck: SRE/Platform team figures that react to incidents
-- [ ] StatefulSet ships visually distinct
-- [ ] CronJob pods as patrol ships (appear on schedule, then vanish)
+- [ ] Interior ship view: each compartment = a pod
+- [ ] Crew aboard: SRE/Platform team figures that react to incidents
+- [ ] StatefulSet ships visually distinct (heavy cruisers)
+- [ ] CronJob pods as patrol craft (appear on schedule, then vanish)
 
 ### Step 3 — Multi-cluster
-- [ ] Multiple fleets on the same space map
-- [ ] Cluster-to-cluster navigation
+- [ ] Multiple fleets across the same sector
+- [ ] Fleet-to-fleet navigation
 
 ### Step 4 — Game Mode
-- [ ] Chaos engineering as torpedo attacks
+- [ ] Chaos engineering as torpedo strikes
 - [ ] Red team / blue team
-- [ ] RBAC as military ranks (Admiral, Captain, Sailor)
+- [ ] RBAC as military ranks (Admiral, Captain, Ensign)
 - [ ] Kubernetes learning mode
 
 ---
