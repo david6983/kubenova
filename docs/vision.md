@@ -1,18 +1,14 @@
 # KubeBoat — Vision
 
-## The Problem
-
-Grafana works. But it's ugly, boring, and mentally exhausting. Understanding the state of a Kubernetes cluster by staring at gauges and graphs is a skill you acquire through suffering — not something that comes naturally.
-
-The ops engineer monitoring their cluster at 2am deserves better than a grey dashboard.
-
 ## The Idea
 
-KubeBoat replaces the monitoring mental model with something instinctive: **a space fleet in a 3D universe**.
+Your cluster is alive — nodes humming, pods spawning, traffic flowing between services. Most people never see it. They see Grafana dashboards, tables, and status pages.
 
-You don't read metrics anymore. You command a fleet. You see at a glance whether your ships are healthy, whether systems are overheating, whether the fleet is taking fire. The captain shouts alerts at you. Your engineers scramble to fix what's on fire.
+KubeBoat makes the cluster **visible as something beautiful**: a space fleet drifting through the void. Fighter craft in tight formations. Nebula storms intensifying when the fleet is under pressure. The captain's voice cutting through when something goes wrong.
 
-It's the datafast for ops — beautiful, readable, and a little fun.
+Put it on a screen in the office. Let it run. Glance at it. You'll know.
+
+It's for people who love space — and happen to run Kubernetes.
 
 ---
 

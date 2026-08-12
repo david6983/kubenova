@@ -10,9 +10,9 @@ Instead of dashboards and graphs, you command an armada — nodes are capital sh
 
 ## The Idea
 
-Grafana works. But staring at grey dashboards at 2am is exhausting. Understanding cluster state from gauges and graphs is a skill acquired through suffering — not something instinctive.
+Your cluster is alive — nodes humming, pods spawning, traffic flowing between services. KubeBoat makes that visible as something beautiful: a space fleet drifting through the void, fighter craft in formation, nebula storms swelling when things get rough.
 
-KubeBoat makes cluster state **readable at a glance**. You see it. You feel it.
+Put it on a screen in the office. Let it run. Glance at it. You'll know.
 
 | KubeBoat | Kubernetes |
 |---|---|
