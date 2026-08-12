@@ -198,12 +198,12 @@ function AppReal({ onToggleMode }: { onToggleMode: () => void }) {
 
 export default function App() {
   const [simulation, setSimulation] = useState(
-    () => localStorage.getItem('kubeboat_sim') === '1'
+    () => localStorage.getItem('kubenova_sim') === '1'
   )
 
   const toggle = useCallback(() => {
     setSimulation(v => {
-      localStorage.setItem('kubeboat_sim', v ? '0' : '1')
+      localStorage.setItem('kubenova_sim', v ? '0' : '1')
       return !v
     })
   }, [])

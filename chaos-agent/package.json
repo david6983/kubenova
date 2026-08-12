@@ -1,7 +1,7 @@
 {
-  "name": "kubeboat-chaos-agent",
+  "name": "kubenova-chaos-agent",
   "version": "1.0.0",
-  "description": "KubeBoat demo chaos controller — drives real K8s events for fleet visualization",
+  "description": "KubeNova demo chaos controller — drives real K8s events for fleet visualization",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

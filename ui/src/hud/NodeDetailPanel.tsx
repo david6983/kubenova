@@ -306,7 +306,7 @@ export function NodeDetailPanel({ node, onClose }: { node: ClusterNode; onClose:
         borderTop: '1px solid #060f1a',
         flexShrink: 0,
       }}>
-        ATH · KUBEBOAT TACTICAL · {node.name.toUpperCase()}
+        ATH · KUBENOVA TACTICAL · {node.name.toUpperCase()}
       </div>
     </div>
   )

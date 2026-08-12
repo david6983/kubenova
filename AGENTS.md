@@ -1,6 +1,6 @@
-# KubeBoat — Agent Handoff Guide
+# KubeNova — Agent Handoff Guide
 
-KubeBoat is a 3D Kubernetes cluster visualizer styled as a space fleet. Instead of dashboards and graphs, operators command a fleet: nodes are warships, pods are fighter craft flying in squadron formations around each ship.
+KubeNova is a 3D Kubernetes cluster visualizer styled as a space fleet. Instead of dashboards and graphs, operators command a fleet: nodes are warships, pods are fighter craft flying in squadron formations around each ship.
 
 ---
 
@@ -20,7 +20,7 @@ KubeBoat is a 3D Kubernetes cluster visualizer styled as a space fleet. Instead 
 ## Repository Layout
 
 ```
-kubeboat/
+kubenova/
 ├── ui/                        # Vite + React app
 │   ├── server.js              # Node.js backend: kubectl + eBPF agent proxy
 │   ├── src/

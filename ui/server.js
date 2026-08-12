@@ -2,9 +2,9 @@ import { createServer }  from 'http'
 import { execSync }      from 'child_process'
 import { WebSocketServer, WebSocket } from 'ws'
 
-// Set KUBEBOAT_CONTEXT to a kubeconfig context name for local use.
+// Set KUBENOVA_CONTEXT to a kubeconfig context name for local use.
 // Leave empty (default) when running in-cluster — kubectl will use the service account.
-const CONTEXT    = process.env.KUBEBOAT_CONTEXT ?? 'kind-shopnova-prod'
+const CONTEXT    = process.env.KUBENOVA_CONTEXT ?? 'kind-shopnova-prod'
 const PORT       = Number(process.env.PORT) || 3001
 const AGENT_NS   = 'kube-system'
 const AGENT_PORT = 7777

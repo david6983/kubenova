@@ -72,7 +72,7 @@ function FleetWidget({ cluster, health }: { cluster: Cluster; health: ClusterHea
     <Panel style={{ padding: '12px 16px', minWidth: 190 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
         <span style={{ color: '#00b4ff', fontSize: 13, lineHeight: 1 }}>◈</span>
-        <span style={{ color: '#deeeff', fontSize: 12, fontWeight: 700, letterSpacing: 1 }}>KUBEBOAT</span>
+        <span style={{ color: '#deeeff', fontSize: 12, fontWeight: 700, letterSpacing: 1 }}>KUBENOVA</span>
         <span style={{ color: '#4a7a9a', fontSize: 9, marginLeft: 2 }}>{cluster.name}</span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>

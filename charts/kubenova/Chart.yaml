@@ -1,0 +1,16 @@
+apiVersion: v2
+name: kubenova
+description: 3D Kubernetes cluster visualization as a space fleet
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - kubernetes
+  - monitoring
+  - visualization
+  - ebpf
+home: https://github.com/YOUR_ORG/kubenova
+sources:
+  - https://github.com/YOUR_ORG/kubenova
+maintainers:
+  - name: KubeNova Contributors

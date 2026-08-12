@@ -1,7 +1,7 @@
 services:
   chaos-agent:
     build: .
-    container_name: kubeboat-chaos
+    container_name: kubenova-chaos
     ports:
       - "9666:9666"
     volumes:

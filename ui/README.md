@@ -1,6 +1,6 @@
 # ui/
 
-React + Three.js frontend for KubeBoat.
+React + Three.js frontend for KubeNova.
 
 See the [root README](../README.md) for setup instructions and project overview.
 

@@ -1,28 +1,28 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: kubeboat-ui
-  namespace: kubeboat
+  name: kubenova-ui
+  namespace: kubenova
   labels:
-    app: kubeboat-ui
+    app: kubenova-ui
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: kubeboat-ui
+      app: kubenova-ui
   template:
     metadata:
       labels:
-        app: kubeboat-ui
+        app: kubenova-ui
     spec:
       containers:
         - name: ui
-          image: ghcr.io/YOUR_ORG/kubeboat-ui:latest
+          image: ghcr.io/YOUR_ORG/kubenova-ui:latest
           ports:
             - containerPort: 80
           env:
             - name: SERVER_HOST
-              value: kubeboat-server
+              value: kubenova-server
             - name: SERVER_PORT
               value: "3001"
           resources:
@@ -42,11 +42,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: kubeboat-ui
-  namespace: kubeboat
+  name: kubenova-ui
+  namespace: kubenova
 spec:
   selector:
-    app: kubeboat-ui
+    app: kubenova-ui
   ports:
     - port: 80
       targetPort: 80

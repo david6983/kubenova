@@ -85,7 +85,7 @@ async function curlTarget(target) {
 
 // NOTE: trafficLevel is accepted by the API but the curl loop is disabled —
 // ClusterIPs are not reachable from outside the cluster (Docker Desktop).
-// Traffic is visualised in the KubeBoat UI via the frontend slider only.
+// Traffic is visualised in the KubeNova UI via the frontend slider only.
 let state = { trafficLevel: 0, chaosLevel: 0, podKillsTotal: 0, curlsTotal: 0 }
 let chaosTimer = null
 

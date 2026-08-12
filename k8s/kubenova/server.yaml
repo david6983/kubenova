@@ -1,13 +1,13 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: kubeboat-server
-  namespace: kubeboat
+  name: kubenova-server
+  namespace: kubenova
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: kubeboat-server
+  name: kubenova-server
 rules:
   - apiGroups: [""]
     resources: ["nodes", "pods", "events", "namespaces"]
@@ -19,43 +19,43 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: kubeboat-server
+  name: kubenova-server
 subjects:
   - kind: ServiceAccount
-    name: kubeboat-server
-    namespace: kubeboat
+    name: kubenova-server
+    namespace: kubenova
 roleRef:
   kind: ClusterRole
-  name: kubeboat-server
+  name: kubenova-server
   apiGroup: rbac.authorization.k8s.io
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: kubeboat-server
-  namespace: kubeboat
+  name: kubenova-server
+  namespace: kubenova
   labels:
-    app: kubeboat-server
+    app: kubenova-server
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: kubeboat-server
+      app: kubenova-server
   template:
     metadata:
       labels:
-        app: kubeboat-server
+        app: kubenova-server
     spec:
-      serviceAccountName: kubeboat-server
+      serviceAccountName: kubenova-server
       containers:
         - name: server
-          image: ghcr.io/YOUR_ORG/kubeboat-server:latest
+          image: ghcr.io/YOUR_ORG/kubenova-server:latest
           ports:
             - containerPort: 3001
           env:
             # Empty = use in-cluster service account auth (default).
             # Set to a kubeconfig context name for local / out-of-cluster use.
-            - name: KUBEBOAT_CONTEXT
+            - name: KUBENOVA_CONTEXT
               value: ""
           resources:
             requests:
@@ -74,11 +74,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: kubeboat-server
-  namespace: kubeboat
+  name: kubenova-server
+  namespace: kubenova
 spec:
   selector:
-    app: kubeboat-server
+    app: kubenova-server
   ports:
     - port: 3001
       targetPort: 3001

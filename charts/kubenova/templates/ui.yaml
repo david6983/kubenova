@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kubenova-ui
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: kubenova-ui
+    {{- include "kubenova.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.ui.replicaCount }}
+  selector:
+    matchLabels:
+      app: kubenova-ui
+  template:
+    metadata:
+      labels:
+        app: kubenova-ui
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: ui
+          image: {{ include "kubenova.image" (dict "root" . "name" .Values.ui.image.name) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SERVER_HOST
+              value: kubenova-server
+            - name: SERVER_PORT
+              value: "3001"
+          securityContext:
+            {{- toYaml .Values.ui.securityContext | nindent 12 }}
+          resources:
+            {{- toYaml .Values.ui.resources | nindent 12 }}
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kubenova-ui
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kubenova.labels" . | nindent 4 }}
+spec:
+  selector:
+    app: kubenova-ui
+  ports:
+    - port: {{ .Values.ui.service.port }}
+      targetPort: {{ .Values.ui.service.targetPort }}
+  type: {{ .Values.ui.service.type }}

@@ -1,4 +1,4 @@
-# KubeBoat
+# KubeNova
 
 **Kubernetes monitoring reimagined as a 3D space fleet.**
 
@@ -10,11 +10,11 @@ Instead of dashboards and graphs, you command an armada — nodes are capital sh
 
 ## The Idea
 
-Your cluster is alive — nodes humming, pods spawning, traffic flowing between services. KubeBoat makes that visible as something beautiful: a space fleet drifting through the void, fighter craft in formation, nebula storms swelling when things get rough.
+Your cluster is alive — nodes humming, pods spawning, traffic flowing between services. KubeNova makes that visible as something beautiful: a space fleet drifting through the void, fighter craft in formation, nebula storms swelling when things get rough.
 
 Put it on a screen in the office. Let it run. Glance at it. You'll know.
 
-| KubeBoat | Kubernetes |
+| KubeNova | Kubernetes |
 |---|---|
 | Deep space | Infrastructure / cloud |
 | A fleet | A cluster |

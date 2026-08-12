@@ -1,10 +1,10 @@
-# KubeBoat — Vision
+# KubeNova — Vision
 
 ## The Idea
 
 Your cluster is alive — nodes humming, pods spawning, traffic flowing between services. Most people never see it. They see Grafana dashboards, tables, and status pages.
 
-KubeBoat makes the cluster **visible as something beautiful**: a space fleet drifting through the void. Fighter craft in tight formations. Nebula storms intensifying when the fleet is under pressure. The captain's voice cutting through when something goes wrong.
+KubeNova makes the cluster **visible as something beautiful**: a space fleet drifting through the void. Fighter craft in tight formations. Nebula storms intensifying when the fleet is under pressure. The captain's voice cutting through when something goes wrong.
 
 Put it on a screen in the office. Let it run. Glance at it. You'll know.
 
@@ -14,7 +14,7 @@ It's for people who love space — and happen to run Kubernetes.
 
 ## The Metaphor
 
-| KubeBoat world | Kubernetes |
+| KubeNova world | Kubernetes |
 |---|---|
 | Deep space | Infrastructure / cloud |
 | A fleet | A cluster |

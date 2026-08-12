@@ -1,0 +1,96 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kubenova-server
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kubenova.labels" . | nindent 4 }}
+automountServiceAccountToken: true
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kubenova-server-{{ .Release.Namespace }}
+  labels:
+    {{- include "kubenova.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["nodes", "pods", "events", "namespaces"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["pods/proxy"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kubenova-server-{{ .Release.Namespace }}
+  labels:
+    {{- include "kubenova.labels" . | nindent 4 }}
+subjects:
+  - kind: ServiceAccount
+    name: kubenova-server
+    namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: ClusterRole
+  name: kubenova-server-{{ .Release.Namespace }}
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kubenova-server
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: kubenova-server
+    {{- include "kubenova.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.server.replicaCount }}
+  selector:
+    matchLabels:
+      app: kubenova-server
+  template:
+    metadata:
+      labels:
+        app: kubenova-server
+    spec:
+      serviceAccountName: kubenova-server
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: server
+          image: {{ include "kubenova.image" (dict "root" . "name" .Values.server.image.name) }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: 3001
+          env:
+            - name: KUBENOVA_CONTEXT
+              value: {{ .Values.server.context | quote }}
+            - name: NODE_ENV
+              value: production
+          securityContext:
+            {{- toYaml .Values.server.securityContext | nindent 12 }}
+          resources:
+            {{- toYaml .Values.server.resources | nindent 12 }}
+          readinessProbe:
+            httpGet:
+              path: /api/cluster
+              port: 3001
+            initialDelaySeconds: 5
+            periodSeconds: 15
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kubenova-server
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kubenova.labels" . | nindent 4 }}
+spec:
+  selector:
+    app: kubenova-server
+  ports:
+    - port: {{ .Values.server.service.port }}
+      targetPort: {{ .Values.server.service.port }}
+  type: {{ .Values.server.service.type }}

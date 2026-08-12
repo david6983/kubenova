@@ -21,17 +21,17 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: kubeboat-ui
+          - name: kubenova-ui
             context: ui
             dockerfile: ui/Dockerfile
             platforms: linux/amd64,linux/arm64
 
-          - name: kubeboat-server
+          - name: kubenova-server
             context: ui
             dockerfile: ui/Dockerfile.server
             platforms: linux/amd64,linux/arm64
 
-          - name: kubeboat-ebpf-agent
+          - name: kubenova-ebpf-agent
             context: ebpf-agent
             dockerfile: ebpf-agent/Dockerfile
             platforms: linux/amd64,linux/arm64
