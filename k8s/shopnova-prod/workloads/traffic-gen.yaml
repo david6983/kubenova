@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: traffic-gen
+  namespace: production
+  labels:
+    app: traffic-gen
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: traffic-gen
+  template:
+    metadata:
+      labels:
+        app: traffic-gen
+    spec:
+      containers:
+        - name: traffic-gen
+          image: busybox:latest
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 50m
+              memory: 32Mi
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              # Call graph:
+              #   gateway-ctrl → shop-api → product-catalog, user-auth
+              #   shop-api → order-service → payment-service → fraud-detector
+              #   order-service → fulfillment-svc, kafka
+              #   order-worker → postgres-main, redis-cache
+              #   search-api → elasticsearch
+              #   reco-engine → search-api, redis-cache
+              #   prometheus → grafana, shop-api (scraping)
+              #   vault-agent → cert-manager (cert renewal)
+
+              get() { wget -q -O /dev/null --timeout=3 "http://$1" 2>/dev/null || true; }
+
+              while true; do
+                # frontend tier
+                get gateway-ctrl.gateway/
+                get shop-api.production/
+                get shop-api.production/products
+                get shop-api.production/users
+
+                # product & auth
+                get product-catalog.production/
+                get user-auth.production/
+
+                # order flow
+                get order-service.production/
+                get order-service.production/checkout
+                get payment-service.payments/
+                get fraud-detector.payments/
+                get fulfillment-svc.production/
+
+                # messaging & data
+                get kafka.messaging/
+                get postgres-main.data/
+                get redis-cache.data/
+                get redis-cache.data/
+
+                # search & ml
+                get search-api.search/
+                get elasticsearch.search/
+                get reco-engine.ml/
+                get reco-engine.ml/
+
+                # infra
+                get prometheus.monitoring/metrics
+                get grafana.monitoring/
+                get vault-agent.security/
+
+                sleep 2
+              done

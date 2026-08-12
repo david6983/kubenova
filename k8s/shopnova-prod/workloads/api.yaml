@@ -1,0 +1,131 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shop-api
+  namespace: production
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: shop-api
+  template:
+    metadata:
+      labels:
+        app: shop-api
+    spec:
+      containers:
+        - name: shop-api
+          image: nginx:alpine
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: shop-api
+  namespace: production
+spec:
+  selector:
+    app: shop-api
+  ports:
+    - port: 80
+      targetPort: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-catalog
+  namespace: production
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: product-catalog
+  template:
+    metadata:
+      labels:
+        app: product-catalog
+    spec:
+      containers:
+        - name: product-catalog
+          image: nginx:alpine
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: product-catalog
+  namespace: production
+spec:
+  selector:
+    app: product-catalog
+  ports:
+    - port: 80
+      targetPort: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-auth
+  namespace: production
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-auth
+  template:
+    metadata:
+      labels:
+        app: user-auth
+    spec:
+      containers:
+        - name: user-auth
+          image: nginx:alpine
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-auth
+  namespace: production
+spec:
+  selector:
+    app: user-auth
+  ports:
+    - port: 80
+      targetPort: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway-ctrl
+  namespace: gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gateway-ctrl
+  template:
+    metadata:
+      labels:
+        app: gateway-ctrl
+    spec:
+      containers:
+        - name: gateway-ctrl
+          image: nginx:alpine
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway-ctrl
+  namespace: gateway
+spec:
+  selector:
+    app: gateway-ctrl
+  ports:
+    - port: 80
+      targetPort: 80

@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-service
+  namespace: payments
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payment-service
+  template:
+    metadata:
+      labels:
+        app: payment-service
+    spec:
+      containers:
+        - name: payment-service
+          image: nginx:alpine
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-service
+  namespace: payments
+spec:
+  selector:
+    app: payment-service
+  ports:
+    - port: 80
+      targetPort: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fraud-detector
+  namespace: payments
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fraud-detector
+  template:
+    metadata:
+      labels:
+        app: fraud-detector
+    spec:
+      containers:
+        - name: fraud-detector
+          image: nginx:alpine
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fraud-detector
+  namespace: payments
+spec:
+  selector:
+    app: fraud-detector
+  ports:
+    - port: 80
+      targetPort: 80
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: billing-report
+  namespace: payments
+spec:
+  schedule: "0 6 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: billing-report
+              image: busybox:latest
+              command: ["sh", "-c", "echo billing-report complete && sleep 5"]

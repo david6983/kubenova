@@ -1,0 +1,115 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres-main
+  namespace: data
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres-main
+  template:
+    metadata:
+      labels:
+        app: postgres-main
+    spec:
+      containers:
+        - name: postgres-main
+          image: nginx:alpine
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-main
+  namespace: data
+spec:
+  selector:
+    app: postgres-main
+  ports:
+    - port: 80
+      targetPort: 80
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis-cache
+  namespace: data
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis-cache
+  template:
+    metadata:
+      labels:
+        app: redis-cache
+    spec:
+      containers:
+        - name: redis-cache
+          image: nginx:alpine
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-cache
+  namespace: data
+spec:
+  selector:
+    app: redis-cache
+  ports:
+    - port: 80
+      targetPort: 80
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: kafka
+  namespace: messaging
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka
+  template:
+    metadata:
+      labels:
+        app: kafka
+    spec:
+      containers:
+        - name: kafka
+          image: nginx:alpine
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka
+  namespace: messaging
+spec:
+  selector:
+    app: kafka
+  ports:
+    - port: 80
+      targetPort: 80
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: db-cleanup
+  namespace: data
+spec:
+  schedule: "0 2 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: db-cleanup
+              image: busybox:latest
+              command: ["sh", "-c", "echo db-cleanup complete && sleep 5"]

@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+ui/node_modules/
+chaos-agent/node_modules/
+
+# Build output
+ui/dist/
+ui/.vite/
+
+# Go binaries
+ebpf-agent/ebpf-agent
+
+# Environment & secrets
+chaos-agent/kubeconfig.yaml
+*.env
+.env.*
+!.env.example
+
+# macOS
+.DS_Store
+**/.DS_Store
+*.icloud
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Internal tooling
+.gstack/
+**/.gstack/
+
+# Logs
+*.log
+npm-debug.log*
+
+# 3D asset originals (large binaries — app uses gltf in ui/public/models/)
+assets/models/*/Blend/
+assets/models/*/FBX/
+assets/models/*/OBJ/
+assets/models/*/*.blend1

@@ -1,0 +1,10 @@
+{
+  "name": "kubeboat-chaos-agent",
+  "version": "1.0.0",
+  "description": "KubeBoat demo chaos controller — drives real K8s events for fleet visualization",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {}
+}

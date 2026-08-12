@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: node-exporter
+  namespace: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: node-exporter
+  template:
+    metadata:
+      labels:
+        app: node-exporter
+    spec:
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: node-exporter
+          image: registry.k8s.io/pause:3.9
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: fluentbit
+  namespace: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: fluentbit
+  template:
+    metadata:
+      labels:
+        app: fluentbit
+    spec:
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: fluentbit
+          image: registry.k8s.io/pause:3.9
