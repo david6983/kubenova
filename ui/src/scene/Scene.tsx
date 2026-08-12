@@ -137,7 +137,7 @@ export function Scene({
 
   return (
     <Canvas
-      camera={{ position: [0, 560, -750], fov: 55, near: 0.1, far: 8000 }}
+      camera={{ position: [0, 560, -750], fov: 55, near: 0.1, far: 3000 }}
       style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
       dpr={[1, 1.2]}
       performance={{ min: 0.5 }}
@@ -187,7 +187,7 @@ export function Scene({
           luminanceThreshold={0.72}
           luminanceSmoothing={0.4}
           mipmapBlur
-          levels={3}
+          levels={2}
         />
       </EffectComposer>
     </Canvas>

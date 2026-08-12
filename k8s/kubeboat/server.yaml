@@ -1,0 +1,85 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kubeboat-server
+  namespace: kubeboat
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kubeboat-server
+rules:
+  - apiGroups: [""]
+    resources: ["nodes", "pods", "events", "namespaces"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["pods/proxy"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kubeboat-server
+subjects:
+  - kind: ServiceAccount
+    name: kubeboat-server
+    namespace: kubeboat
+roleRef:
+  kind: ClusterRole
+  name: kubeboat-server
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kubeboat-server
+  namespace: kubeboat
+  labels:
+    app: kubeboat-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kubeboat-server
+  template:
+    metadata:
+      labels:
+        app: kubeboat-server
+    spec:
+      serviceAccountName: kubeboat-server
+      containers:
+        - name: server
+          image: ghcr.io/YOUR_ORG/kubeboat-server:latest
+          ports:
+            - containerPort: 3001
+          env:
+            # Empty = use in-cluster service account auth (default).
+            # Set to a kubeconfig context name for local / out-of-cluster use.
+            - name: KUBEBOAT_CONTEXT
+              value: ""
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          readinessProbe:
+            httpGet:
+              path: /api/cluster
+              port: 3001
+            initialDelaySeconds: 5
+            periodSeconds: 15
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kubeboat-server
+  namespace: kubeboat
+spec:
+  selector:
+    app: kubeboat-server
+  ports:
+    - port: 3001
+      targetPort: 3001
+  type: ClusterIP

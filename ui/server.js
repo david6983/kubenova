@@ -2,16 +2,19 @@ import { createServer }  from 'http'
 import { execSync }      from 'child_process'
 import { WebSocketServer, WebSocket } from 'ws'
 
-const CONTEXT    = 'kind-shopnova-prod'
-const PORT       = 3001
+// Set KUBEBOAT_CONTEXT to a kubeconfig context name for local use.
+// Leave empty (default) when running in-cluster — kubectl will use the service account.
+const CONTEXT    = process.env.KUBEBOAT_CONTEXT ?? 'kind-shopnova-prod'
+const PORT       = Number(process.env.PORT) || 3001
 const AGENT_NS   = 'kube-system'
 const AGENT_PORT = 7777
 
 // ── kubectl helpers ────────────────────────────────────────────────────────────
 
 function kubectl(cmd) {
+  const ctx = CONTEXT ? `--context=${CONTEXT}` : ''
   return JSON.parse(
-    execSync(`kubectl --context=${CONTEXT} ${cmd} -o json`, {
+    execSync(`kubectl ${ctx} ${cmd} -o json`, {
       encoding: 'utf8',
       timeout: 8000,
       stdio: ['pipe', 'pipe', 'pipe'],
@@ -21,8 +24,9 @@ function kubectl(cmd) {
 
 // Hit a pod's HTTP endpoint through the kube-apiserver proxy — no port-forward needed.
 function kubectlProxy(podName, path) {
+  const ctx = CONTEXT ? `--context=${CONTEXT}` : ''
   const raw = execSync(
-    `kubectl --context=${CONTEXT} get --raw "/api/v1/namespaces/${AGENT_NS}/pods/${podName}:${AGENT_PORT}/proxy${path}"`,
+    `kubectl ${ctx} get --raw "/api/v1/namespaces/${AGENT_NS}/pods/${podName}:${AGENT_PORT}/proxy${path}"`,
     { encoding: 'utf8', timeout: 5000 }
   )
   return JSON.parse(raw)

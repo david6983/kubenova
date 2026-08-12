@@ -2,7 +2,9 @@ import { useState, useEffect, useRef } from 'react'
 import type { Cluster } from '../types'
 import type { SimEvent } from '../mock/useSimulatedCluster'
 
-const WS_URL      = 'ws://localhost:3001'
+// In dev, Vite proxies /ws → localhost:3001 (see vite.config.ts).
+// In production (nginx), nginx proxies /ws → kubeboat-server:3001.
+const WS_URL      = `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}/ws`
 const REST_URL    = '/api/cluster'
 const WS_TIMEOUT  = 3000   // fall back to HTTP if WS not established within this
 const POLL_MS     = 8000
