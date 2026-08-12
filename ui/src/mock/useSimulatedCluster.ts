@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import type { Cluster, ClusterNode, Pod } from '../types'
+import type { Cluster, Pod } from '../types'
 import { mockCluster } from './cluster'
 
 // ── Types ─────────────────────────────────────────────────────────────────────

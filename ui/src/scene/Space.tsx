@@ -83,7 +83,7 @@ export function Space() {
 
   return (
     <mesh>
-      <sphereGeometry args={[3000, 12, 12]} />
+      <sphereGeometry args={[3000, 48, 32]} />
       <shaderMaterial
         ref={matRef}
         vertexShader={vertexShader}

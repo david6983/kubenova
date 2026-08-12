@@ -2,11 +2,27 @@
 
 **Kubernetes monitoring reimagined as a 3D space fleet.**
 
+<p align="center">
+  <img src="docs/screenshots/kubenova-ui-simulator-high-traffic.png" alt="KubeNova fleet in high-traffic storm" width="100%">
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/kubenova-ui-demo-crew-view.png" alt="KubeNova crew panel" width="100%">
+</p>
+
+<p align="center">
+  <video src="docs/screenshots/simulator-demo.mp4" autoplay loop muted playsinline width="100%"></video>
+</p>
+
 Instead of dashboards and graphs, you command an armada — nodes are capital ships, pods are fighter craft flying in squadron formations around each vessel. The captain announces alerts. Nebula storm intensity reflects cluster health. When pods crash, they explode in the void.
 
 > This is an early preview. The core 3D visualization works and the eBPF agent is functional. A lot is still being built.
 
 ---
+
+## Inspiration
+
+I was fascinated by *Ender's Game* — both the book and the film. The idea that a commander could observe an entire battle as a living, moving system, understand its state at a glance, and act on instinct rather than spreadsheets. That's what I wanted for Kubernetes. Your cluster deserves the same kind of situational awareness Ender had in the Command Room.
 
 ## The Idea
 
@@ -28,10 +44,13 @@ Put it on a screen in the office. Let it run. Glance at it. You'll know.
 
 ## Quick Start
 
-### Simulation mode — no cluster needed
+### Option 1 — SIM mode, no cluster needed (30 seconds)
+
+Just Node.js required.
 
 ```bash
-cd ui
+git clone https://github.com/david6983/kubenova.git
+cd kubenova/ui
 npm install
 npm run dev
 # open http://localhost:5173
@@ -39,40 +58,98 @@ npm run dev
 
 Toggle **SIM** in the top-right corner. The simulation fires random events: pod crashes, node flapping, traffic spikes, crashloop storms.
 
-### Live mode — real Kubernetes cluster
+---
 
-Requirements: `kubectl` installed and configured against a running cluster.
+### Option 2 — Live mode, local dev
+
+**A) Simplest: two terminals**
+
+Requirements: `kubectl` configured against any running cluster, Node.js 20+.
 
 ```bash
-# Terminal 1 — backend
-cd ui
+# Terminal 1 — backend (point at your cluster context)
+cd kubenova/ui
 npm install
-node server.js
+KUBENOVA_CONTEXT=my-cluster node server.js
 
 # Terminal 2 — UI
 npm run dev
+# open http://localhost:5173 → toggle LIVE
 ```
 
-Open http://localhost:5173 and toggle **LIVE**.
+`KUBENOVA_CONTEXT` is optional — leave it unset to use the current kubeconfig context.
 
-### With real eBPF metrics
+**B) Full stack via Docker Compose (builds images from source)**
 
-The eBPF agent runs as a DaemonSet and reports real pod CPU/memory and pod-to-pod network flows. Requires a Linux cluster (KinD works on macOS via Docker).
+Requirements: Docker, kubectl configured.
 
 ```bash
-# Create a demo cluster (optional — uses the shopnova-prod example)
+KUBENOVA_CONTEXT=my-cluster docker compose up --build
+# open http://localhost:8080 → toggle LIVE
+```
+
+**C) Demo cluster with eBPF metrics** (KinD + real pod CPU/mem + network flows)
+
+Requirements: Docker, `kind`, `kubectl`, `make`, Node.js 20+.
+
+```bash
+# Spin up the bundled demo cluster
 kind create cluster --name shopnova-prod --config k8s/shopnova-prod/kind-config.yaml
 kubectl apply -f k8s/shopnova-prod/namespaces.yaml
 kubectl apply -f k8s/shopnova-prod/workloads/
 kubectl apply -f k8s/shopnova-prod/limitrange.yaml
 
-# Build and deploy the eBPF agent
-cd ebpf-agent
-make deploy
+# Deploy the eBPF agent DaemonSet
+cd ebpf-agent && make deploy && cd ..
 
-# Start the backend + UI
-cd ../ui && node server.js &
+# Start backend + UI
+cd ui && npm install
+KUBENOVA_CONTEXT=kind-shopnova-prod node server.js &
 npm run dev
+# open http://localhost:5173 → toggle LIVE
+```
+
+---
+
+### Option 3 — Install in your cluster via Helm
+
+Requirements: Helm 3, `kubectl` configured against your cluster, images available in a registry.
+
+**Build and push images first** (GitHub Actions does this automatically on push to `main`):
+
+```bash
+# Or build manually and push to any registry you control
+docker build -t ghcr.io/david6983/kubenova-ui:latest     ui/ -f ui/Dockerfile
+docker build -t ghcr.io/david6983/kubenova-server:latest ui/ -f ui/Dockerfile.server
+docker build -t ghcr.io/david6983/kubenova-ebpf-agent:latest ebpf-agent/ -f ebpf-agent/Dockerfile
+docker push ghcr.io/david6983/kubenova-ui:latest
+docker push ghcr.io/david6983/kubenova-server:latest
+docker push ghcr.io/david6983/kubenova-ebpf-agent:latest
+```
+
+**Install with Helm:**
+
+```bash
+helm install kubenova ./charts/kubenova \
+  -n kubenova \
+  --create-namespace \
+  --set image.org=david6983 \
+  --set ingress.enabled=true \
+  --set ingress.host=kubenova.yourcompany.com
+```
+
+The eBPF DaemonSet is enabled by default — it needs a real Linux kernel (any standard cloud cluster works). On macOS KinD or without eBPF support:
+
+```bash
+--set ebpfAgent.enabled=false
+```
+
+**Kustomize alternative** (no Helm):
+
+```bash
+# Edit k8s/kubenova/*.yaml to replace david6983 with your registry org
+kubectl apply -k k8s/kubenova/
+kubectl apply -f ebpf-agent/deploy/daemonset.yaml
 ```
 
 ---

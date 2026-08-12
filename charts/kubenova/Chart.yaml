@@ -9,8 +9,8 @@ keywords:
   - monitoring
   - visualization
   - ebpf
-home: https://github.com/YOUR_ORG/kubenova
+home: https://github.com/david6983/kubenova
 sources:
-  - https://github.com/YOUR_ORG/kubenova
+  - https://github.com/david6983/kubenova
 maintainers:
   - name: KubeNova Contributors

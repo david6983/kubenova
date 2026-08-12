@@ -57,13 +57,6 @@ function FlowLines({ flows, curves }: { flows: Flow[]; curves: CatmullRomCurve3[
 
 // ── All particles in one InstancedMesh — one useFrame total ──────────────────
 
-interface ParticleEntry {
-  curve:  CatmullRomCurve3
-  color:  Color
-  speed:  number
-  cutoff: number  // 0.6 for blocked, 1.0 otherwise
-  offset: number  // start phase
-}
 
 const PMAX = 5
 

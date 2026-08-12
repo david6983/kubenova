@@ -20,28 +20,35 @@ function nodeHealth(node: ClusterNode) {
   return 'good'
 }
 
+// Cluster-derived strings (pod names, node names, event messages) are untrusted.
+// Sanitize before embedding in any human-readable or LLM-bound message:
+// strip control characters, collapse whitespace, cap length.
+function sanitize(s: string, maxLen = 80): string {
+  return s.replace(/[\x00-\x1f\x7f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, maxLen)
+}
+
 function buildMessages(cluster: Cluster): CaptainMsg[] {
   const msgs: CaptainMsg[] = []
 
   for (const node of cluster.nodes) {
     if (!node.ready)
-      msgs.push({ level: 'critical', text: `${node.name} is unresponsive. Fleet integrity compromised.` })
+      msgs.push({ level: 'critical', text: `${sanitize(node.name)} is unresponsive. Fleet integrity compromised.` })
   }
 
   for (const node of cluster.nodes) {
     for (const pod of node.pods) {
       if (pod.status === 'crashloop')
-        msgs.push({ level: 'alert', text: `${pod.name} is looping on ${node.name}. System unstable.` })
+        msgs.push({ level: 'alert', text: `${sanitize(pod.name)} is looping on ${sanitize(node.name)}. System unstable.` })
       else if (pod.status === 'failed')
-        msgs.push({ level: 'alert', text: `${pod.name} has failed. ${node.name} at reduced capacity.` })
+        msgs.push({ level: 'alert', text: `${sanitize(pod.name)} has failed. ${sanitize(node.name)} at reduced capacity.` })
     }
   }
 
   for (const node of cluster.nodes) {
     if (node.cpuPct > 0.85)
-      msgs.push({ level: 'warn', text: `${node.name} at ${Math.round(node.cpuPct * 100)}% CPU. Recommend load redistribution.` })
+      msgs.push({ level: 'warn', text: `${sanitize(node.name)} at ${Math.round(node.cpuPct * 100)}% CPU. Recommend load redistribution.` })
     if (node.memPct > 0.88)
-      msgs.push({ level: 'warn', text: `${node.name} memory at ${Math.round(node.memPct * 100)}%. OOM risk elevated.` })
+      msgs.push({ level: 'warn', text: `${sanitize(node.name)} memory at ${Math.round(node.memPct * 100)}%. OOM risk elevated.` })
   }
 
   const pending = cluster.nodes.flatMap(n => n.pods).filter(p => p.status === 'pending')

@@ -1,33 +1,18 @@
 import { useRef, useEffect, useMemo, useState } from 'react'
-import type { Cluster, Pod } from '../types'
+import type { Cluster, ClusterNode } from '../types'
 import type { ClusterHealth } from '../scene/Weather'
 import type { SimEvent } from '../mock/useSimulatedCluster'
-import { NS_COLORS, getNsColor, dominantNamespace } from '../constants/namespaces'
+import { getNsColor } from '../constants/namespaces'
 import { CrewPanel } from './CrewPanel'
 import { Captain } from './Captain'
 
 // ─── Shared primitives ────────────────────────────────────────────────────────
-
-const STATUS_COLOR: Record<Pod['status'], string> = {
-  running:   '#00e87a',
-  pending:   '#ffc700',
-  failed:    '#ff2200',
-  crashloop: '#ff5500',
-}
 
 function nodeHealth(node: ClusterNode): 'good' | 'warn' | 'critical' {
   if (!node.ready) return 'critical'
   const hasFailed = node.pods.some(p => p.status === 'failed' || p.status === 'crashloop')
   if (hasFailed || node.cpuPct > 0.8 || node.memPct > 0.85) return 'warn'
   return 'good'
-}
-
-function Bar({ value, color }: { value: number; color: string }) {
-  return (
-    <div style={{ background: 'rgba(255,255,255,0.12)', borderRadius: 2, height: 3, width: '100%' }}>
-      <div style={{ height: '100%', width: `${Math.round(value * 100)}%`, background: color, borderRadius: 2, transition: 'width 0.4s' }} />
-    </div>
-  )
 }
 
 function Panel({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
@@ -213,14 +198,14 @@ function EventLog({ events }: { events: SimEvent[] }) {
   }, [events.length])
 
   return (
-    <Panel style={{ width: 320, overflow: 'hidden' }}>
+    <Panel style={{ width: 320, overflow: 'hidden', pointerEvents: 'auto' }}>
       <div style={{
         padding: '7px 12px', borderBottom: '1px solid rgba(0,180,255,0.20)',
         fontSize: 9, color: '#00b4ff', letterSpacing: 2, fontWeight: 700,
       }}>
         ◈ OPERATIONS LOG
       </div>
-      <div ref={scrollRef} style={{ maxHeight: 160, overflowY: 'auto', padding: '2px 0' }}>
+      <div ref={scrollRef} style={{ maxHeight: 112, overflowY: 'auto', padding: '2px 0' }}>
         {events.length === 0 ? (
           <div style={{ color: '#4a7a9a', fontSize: 9, padding: '8px 12px', fontStyle: 'italic' }}>
             All systems nominal…
@@ -248,92 +233,21 @@ function EventLog({ events }: { events: SimEvent[] }) {
   )
 }
 
-// ─── Selected node panel ──────────────────────────────────────────────────────
-
-function SelectedPanel({ node, onClose }: { node: ClusterNode; onClose: () => void }) {
-  const health = nodeHealth(node)
-  const borderColor = health === 'critical' ? '#ff2200' : health === 'warn' ? '#ffc700' : '#00b4ff'
-  const cpu = node.cpuPct
-  const mem = node.memPct
-  const cpuColor = cpu > 0.8 ? '#ff5500' : cpu > 0.6 ? '#ffc700' : '#00e87a'
-  const memColor = mem > 0.85 ? '#ff2200' : mem > 0.7 ? '#ffc700' : '#00e87a'
-  const nsColor  = getNsColor(dominantNamespace(node.pods))
-
-  const podsByNs = useMemo(() => {
-    const map: Record<string, Pod[]> = {}
-    for (const p of node.pods) {
-      if (!map[p.namespace]) map[p.namespace] = []
-      map[p.namespace].push(p)
-    }
-    return Object.entries(map)
-  }, [node])
-
-  return (
-    <div style={{
-      background: 'rgba(2,6,18,0.94)',
-      border: `1px solid ${borderColor}30`,
-      borderTop: `2px solid ${borderColor}`,
-      borderRadius: 8,
-      fontFamily: '"DM Mono", "Fira Mono", monospace',
-      width: 240, maxHeight: 360,
-      display: 'flex', flexDirection: 'column',
-      backdropFilter: 'blur(10px)',
-      boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
-    }}>
-      <div style={{ padding: '10px 14px', borderBottom: '1px solid rgba(255,255,255,0.10)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-            <span style={{ width: 8, height: 8, borderRadius: '50%', background: nsColor, boxShadow: `0 0 8px ${nsColor}`, display: 'inline-block', flexShrink: 0 }} />
-            <span style={{ color: '#deeeff', fontWeight: 700, fontSize: 12 }}>{node.name}</span>
-          </div>
-          <span onClick={onClose} style={{ cursor: 'pointer', color: '#5a8aaa', fontSize: 14, lineHeight: 1, padding: '0 2px' }}>✕</span>
-        </div>
-        <div style={{ fontSize: 8, color: '#5a88a8', marginBottom: 10, letterSpacing: 0.5 }}>
-          {node.role === 'control-plane' ? '◈ COMMAND SHIP' : '▲ FIGHTER'}
-          {' · '}
-          <span style={{ color: node.ready ? '#00e87a' : '#ff2200' }}>{node.ready ? 'ONLINE' : 'OFFLINE'}</span>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          {[
-            { label: 'CPU', value: cpu, color: cpuColor },
-            { label: 'MEM', value: mem, color: memColor },
-          ].map(({ label, value, color }) => (
-            <div key={label}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: '#6a9aaa', marginBottom: 4 }}>
-                <span>{label}</span><span style={{ color }}>{Math.round(value * 100)}%</span>
-              </div>
-              <Bar value={value} color={color} />
-            </div>
-          ))}
-        </div>
-      </div>
-      <div style={{ flex: 1, overflowY: 'auto', padding: '8px 14px' }}>
-        {podsByNs.map(([ns, pods]) => (
-          <div key={ns} style={{ marginBottom: 8 }}>
-            <div style={{ fontSize: 8, color: '#5a8aaa', marginBottom: 4, letterSpacing: 1 }}>
-              {ns}
-            </div>
-            {pods.map(pod => (
-              <div key={pod.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, padding: '2px 0', gap: 8 }}>
-                <span style={{ color: '#7aaabb', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {pod.name}
-                </span>
-                <span style={{ color: STATUS_COLOR[pod.status], fontWeight: pod.status !== 'running' ? 700 : 400, flexShrink: 0 }}>
-                  {pod.status === 'crashloop' ? '⚠ loop' : pod.status}
-                </span>
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
 // ─── Legend panel ─────────────────────────────────────────────────────────────
 
-function LegendPanel() {
+function LegendPanel({ cluster }: { cluster: Cluster }) {
   const [open, setOpen] = useState(false)
+
+  const topNamespaces = useMemo(() => {
+    const counts: Record<string, number> = {}
+    cluster.nodes.flatMap(n => n.pods).forEach(p => {
+      counts[p.namespace] = (counts[p.namespace] || 0) + 1
+    })
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6)
+      .map(([ns]) => ({ dot: getNsColor(ns), label: ns }))
+  }, [cluster])
 
   const sections = [
     { title: 'VESSELS', items: [
@@ -352,7 +266,7 @@ function LegendPanel() {
       { dot: '#ffc700', label: 'Degraded route' },
       { dot: '#ff2200', label: 'Blocked route' },
     ]},
-    { title: 'SQUADRONS', items: Object.entries(NS_COLORS).slice(0, 5).map(([ns, col]) => ({ dot: col, label: ns })) },
+    ...(topNamespaces.length > 0 ? [{ title: 'SQUADRONS', items: topNamespaces }] : []),
   ]
 
   return (
@@ -430,7 +344,7 @@ function SquadronPanel({ cluster, focusNs, onFocusNs }: {
   const namespaces = useMemo(() => {
     const counts: Record<string, number> = {}
     cluster.nodes.flatMap(n => n.pods).forEach(p => {
-      if (NS_COLORS[p.namespace]) counts[p.namespace] = (counts[p.namespace] || 0) + 1
+      counts[p.namespace] = (counts[p.namespace] || 0) + 1
     })
     return Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([ns]) => ns)
   }, [cluster])
@@ -440,7 +354,7 @@ function SquadronPanel({ cluster, focusNs, onFocusNs }: {
       <div style={{ fontSize: 8, color: '#4a7a9a', letterSpacing: 2, fontWeight: 700, marginBottom: 8, textAlign: 'center' as const }}>
         SQUADRON
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 260, overflowY: 'auto' }}>
         {focusNs && (
           <>
             <button onClick={() => onFocusNs(null)} onMouseDown={e => e.preventDefault()}
@@ -457,19 +371,20 @@ function SquadronPanel({ cluster, focusNs, onFocusNs }: {
           </>
         )}
         {namespaces.map(ns => {
-          const col = getNsColor(ns)
+          const col    = getNsColor(ns)
           const active = focusNs === ns
           return (
             <button key={ns} onClick={() => onFocusNs(active ? null : ns)}
               onMouseDown={e => e.preventDefault()}
               style={{
-                display: 'flex', alignItems: 'center',
+                display: 'flex', alignItems: 'center', gap: 7,
                 background: active ? 'rgba(255,255,255,0.15)' : 'transparent',
-                border: `1px solid ${active ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.12)'}`,
+                border: `1px solid ${active ? `${col}44` : 'rgba(255,255,255,0.12)'}`,
                 borderRadius: 5, padding: '5px 10px',
                 cursor: 'pointer', transition: 'all 0.15s',
                 textAlign: 'left' as const,
               }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: col, flexShrink: 0, boxShadow: `0 0 4px ${col}88` }} />
               <span style={{
                 color: active ? '#deeeff' : '#5a8aaa',
                 fontSize: 9, letterSpacing: 0.5,
@@ -513,115 +428,6 @@ function BottomBar({
         <ToggleBtn active={false} onClick={onOpenCrew} color="#4488ff">⚑ CREW</ToggleBtn>
       </div>
     </Panel>
-  )
-}
-
-// ─── Interior HUD ─────────────────────────────────────────────────────────────
-
-const HEALTH_COLOR_INT = { good: '#00e87a', warn: '#ffaa22', critical: '#ff2200' }
-
-function InteriorHUD({ node, onExit }: { node: ClusterNode; onExit: () => void }) {
-  const health = nodeHealth(node)
-  const hColor = HEALTH_COLOR_INT[health]
-  const podCount   = node.pods.length
-  const runningCt  = node.pods.filter(p => p.status === 'running').length
-  const problemCt  = node.pods.filter(p => p.status === 'failed' || p.status === 'crashloop').length
-
-  return (
-    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-      {/* Back button + breadcrumb */}
-      <div style={{ position: 'absolute', top: 20, left: 20, pointerEvents: 'all' }}>
-        <button
-          onClick={onExit}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            background: 'rgba(2,6,18,0.85)',
-            border: '1px solid rgba(0,180,255,0.22)',
-            borderRadius: 6,
-            color: '#7ab8d8',
-            fontFamily: '"DM Mono","Fira Mono",monospace',
-            fontSize: 11,
-            padding: '7px 14px',
-            cursor: 'pointer',
-            letterSpacing: 1,
-            backdropFilter: 'blur(8px)',
-            transition: 'border-color 0.2s, color 0.2s',
-          }}
-          onMouseEnter={e => {
-            ;(e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(0,180,255,0.5)'
-            ;(e.currentTarget as HTMLButtonElement).style.color = '#c0e8ff'
-          }}
-          onMouseLeave={e => {
-            ;(e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(0,180,255,0.22)'
-            ;(e.currentTarget as HTMLButtonElement).style.color = '#7ab8d8'
-          }}
-        >
-          ← FLEET VIEW
-        </button>
-        <div style={{
-          marginTop: 8,
-          fontFamily: '"DM Mono","Fira Mono",monospace',
-          fontSize: 9,
-          color: '#2a5a7a',
-          letterSpacing: 2,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 6,
-        }}>
-          <span style={{ color: hColor }}>◈</span>
-          {node.name.toUpperCase()}
-          <span style={{ color: '#4a7a9a' }}>·</span>
-          {node.role.toUpperCase()}
-        </div>
-      </div>
-
-      {/* Pod status summary — top right */}
-      <div style={{
-        position: 'absolute', top: 20, right: 20,
-        background: 'rgba(2,6,18,0.82)',
-        border: '1px solid rgba(0,180,255,0.28)',
-        borderRadius: 6,
-        padding: '10px 16px',
-        fontFamily: '"DM Mono","Fira Mono",monospace',
-        backdropFilter: 'blur(8px)',
-        minWidth: 140,
-      }}>
-        <div style={{ fontSize: 8, color: '#5a8aaa', letterSpacing: 2, marginBottom: 8 }}>
-          CREW MANIFEST
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 20 }}>
-            <span style={{ color: '#5aaa7a', fontSize: 9 }}>● RUNNING</span>
-            <span style={{ color: '#c0f0d8', fontSize: 9, fontWeight: 700 }}>{runningCt}</span>
-          </div>
-          {problemCt > 0 && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 20 }}>
-              <span style={{ color: '#5a2a2a', fontSize: 9 }}>⚠ PROBLEM</span>
-              <span style={{ color: '#ff8844', fontSize: 9, fontWeight: 700 }}>{problemCt}</span>
-            </div>
-          )}
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 20, borderTop: '1px solid rgba(255,255,255,0.10)', paddingTop: 4, marginTop: 2 }}>
-            <span style={{ color: '#4a7a9a', fontSize: 9 }}>TOTAL</span>
-            <span style={{ color: '#6a8aa8', fontSize: 9 }}>{podCount}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* ESC hint */}
-      <div style={{
-        position: 'absolute', bottom: 20, left: '50%',
-        transform: 'translateX(-50%)',
-        fontFamily: '"DM Mono","Fira Mono",monospace',
-        fontSize: 9,
-        color: '#0e2a40',
-        letterSpacing: 2,
-        pointerEvents: 'none',
-      }}>
-        ESC · RETURN TO FLEET
-      </div>
-    </div>
   )
 }
 
@@ -700,7 +506,7 @@ export function HUD({
 
       {/* Bottom-right */}
       <div style={{ position: 'absolute', bottom: 16, right: 16, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
-        <LegendPanel />
+        <LegendPanel cluster={cluster} />
       </div>
 
       {showCrew && <CrewPanel onClose={() => setShowCrew(false)} />}

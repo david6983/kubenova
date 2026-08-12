@@ -49,7 +49,7 @@ spec:
       serviceAccountName: kubenova-server
       containers:
         - name: server
-          image: ghcr.io/YOUR_ORG/kubenova-server:latest
+          image: ghcr.io/david6983/kubenova-server:latest
           ports:
             - containerPort: 3001
           env:

@@ -7,8 +7,9 @@ chaos-agent/node_modules/
 ui/dist/
 ui/.vite/
 
-# Go binaries
+# Go binaries and eBPF compiled objects
 ebpf-agent/ebpf-agent
+*.o
 
 # Environment & secrets
 chaos-agent/kubeconfig.yaml

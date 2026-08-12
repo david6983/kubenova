@@ -3,7 +3,7 @@
 
 image:
   registry: ghcr.io
-  org: YOUR_ORG
+  org: david6983
   tag: latest
   pullPolicy: IfNotPresent
 

@@ -93,7 +93,7 @@ export function Weather({ health }: { health: ClusterHealth }) {
 
   return (
     <mesh ref={meshRef}>
-      <sphereGeometry args={[1100, 14, 14]} />
+      <sphereGeometry args={[1100, 40, 28]} />
       <shaderMaterial
         ref={matRef}
         vertexShader={stormVert}

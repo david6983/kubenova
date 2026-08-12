@@ -1,6 +1,6 @@
 import { useRef, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { ShaderMaterial, Mesh, BackSide, DoubleSide, AdditiveBlending, Group } from 'three'
+import { ShaderMaterial, Mesh, BackSide, DoubleSide, AdditiveBlending } from 'three'
 
 // ─── Gas Giant ────────────────────────────────────────────────────────────────
 
@@ -89,68 +89,6 @@ function GasGiant() {
         <shaderMaterial vertexShader={ringVert} fragmentShader={ringFrag}
           uniforms={{ uColor: { value: [0.35, 0.25, 0.85] } }}
           side={DoubleSide} transparent depthWrite={false} />
-      </mesh>
-    </group>
-  )
-}
-
-// ─── Drifting Asteroids ───────────────────────────────────────────────────────
-
-const moonFrag = `
-varying vec3 vPos;
-float hash(vec3 p) { p=fract(p*0.3183099+0.1); p*=17.0; return fract(p.x*p.y*p.z*(p.x+p.y+p.z)); }
-float noise(vec3 x) {
-  vec3 i=floor(x); vec3 f=fract(x); f=f*f*(3.0-2.0*f);
-  return mix(mix(mix(hash(i),hash(i+vec3(1,0,0)),f.x),mix(hash(i+vec3(0,1,0)),hash(i+vec3(1,1,0)),f.x),f.y),
-             mix(mix(hash(i+vec3(0,0,1)),hash(i+vec3(1,0,1)),f.x),mix(hash(i+vec3(0,1,1)),hash(i+vec3(1,1,1)),f.x),f.y),f.z);
-}
-void main() {
-  vec3 n = normalize(vPos);
-  float c = noise(n*6.0)*0.5 + noise(n*15.0)*0.3 + noise(n*40.0)*0.2;
-  vec3 dark = vec3(0.07,0.06,0.10); vec3 light = vec3(0.20,0.18,0.25);
-  vec3 col = mix(dark, light, c);
-  col *= 0.1 + 0.9 * max(dot(n, normalize(vec3(1.0,0.6,0.4))), 0.0);
-  gl_FragColor = vec4(col, 1.0);
-}
-`
-
-interface AsteroidData {
-  x: number       // start X
-  y: number       // fixed Y
-  z: number       // fixed Z — deep background
-  radius: number
-  vx: number      // drift speed X
-  vy: number      // drift speed Y
-  rotX: number
-  rotY: number
-  rotZ: number
-}
-
-const BOUND = 800  // wrap boundary in X
-
-function Asteroid({ data }: { data: AsteroidData }) {
-  const ref = useRef<Group>(null!)
-  const pos = useRef({ x: data.x, y: data.y })
-
-  useFrame((_, delta) => {
-    if (!ref.current) return
-    pos.current.x += data.vx * delta
-    pos.current.y += data.vy * delta
-    // Wrap horizontally so asteroids keep flowing
-    if (pos.current.x > BOUND)  pos.current.x -= BOUND * 2
-    if (pos.current.x < -BOUND) pos.current.x += BOUND * 2
-    ref.current.position.x = pos.current.x
-    ref.current.position.y = pos.current.y
-    ref.current.rotation.x += data.rotX * delta
-    ref.current.rotation.y += data.rotY * delta
-    ref.current.rotation.z += data.rotZ * delta
-  })
-
-  return (
-    <group ref={ref} position={[data.x, data.y, data.z]}>
-      <mesh>
-        <dodecahedronGeometry args={[data.radius, 1]} />
-        <shaderMaterial vertexShader={planetVert} fragmentShader={moonFrag} />
       </mesh>
     </group>
   )

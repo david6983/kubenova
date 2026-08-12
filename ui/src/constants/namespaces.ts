@@ -1,24 +1,37 @@
 import type { Pod } from '../types'
 
-export const NS_COLORS: Record<string, string> = {
-  'production':   '#00b4ff',
-  'payments':     '#ffc700',
-  'data':         '#00e87a',
-  'ml':           '#b44dff',
-  'monitoring':   '#ff5577',
-  'security':     '#ff4400',
-  'kube-system':  '#3d7ab5',
-  'ingress':      '#00ccaa',
-  'cert-manager': '#7799bb',
-  'search':       '#ff9933',
-  'messaging':    '#cc44ff',
-  'gateway':      '#33ddcc',
+// Fixed muted colors for Kubernetes system namespaces
+const SYSTEM_NS_COLORS: Record<string, string> = {
+  'kube-system':      '#3d7ab5',
+  'kube-public':      '#2d5a85',
+  'kube-node-lease':  '#2a4d70',
 }
 
-const DEFAULT_COLOR = '#556677'
+// 12 visually distinct colors; namespace names hash into this palette so
+// any cluster gets consistent, stable colors without any config.
+const PALETTE = [
+  '#00b4ff',
+  '#00e87a',
+  '#ffc700',
+  '#b44dff',
+  '#ff5577',
+  '#33ddcc',
+  '#ff9933',
+  '#cc44ff',
+  '#44ddff',
+  '#ff4488',
+  '#88ee44',
+  '#ffdd44',
+]
+
+function hashNamespace(ns: string): number {
+  let h = 5381
+  for (let i = 0; i < ns.length; i++) h = (h * 33) ^ ns.charCodeAt(i)
+  return Math.abs(h)
+}
 
 export function getNsColor(ns: string): string {
-  return NS_COLORS[ns] ?? DEFAULT_COLOR
+  return SYSTEM_NS_COLORS[ns] ?? PALETTE[hashNamespace(ns) % PALETTE.length]
 }
 
 export function dominantNamespace(pods: Pod[]): string {

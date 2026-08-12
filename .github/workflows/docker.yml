@@ -16,6 +16,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      security-events: write  # for SARIF upload
 
     strategy:
       fail-fast: false
@@ -63,7 +64,35 @@ jobs:
             type=sha,prefix=
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
 
+      # Build amd64-only image locally for CVE scanning (fast, no push)
+      - name: Build image for scanning
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/amd64
+          load: true
+          tags: ${{ matrix.name }}:scan
+          cache-from: type=gha
+
+      - name: Scan with Grype
+        id: grype
+        uses: anchore/scan-action@v6
+        with:
+          image: ${{ matrix.name }}:scan
+          fail-build: true
+          severity-cutoff: critical
+          output-format: sarif
+
+      - name: Upload SARIF to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: ${{ steps.grype.outputs.sarif }}
+
+      # Multi-arch build and push (main branch only)
       - name: Build and push
+        id: push
         uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context }}
@@ -74,3 +103,53 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Write image digest
+        if: github.event_name != 'pull_request'
+        run: |
+          mkdir -p /tmp/digests
+          echo "${{ steps.push.outputs.digest }}" > /tmp/digests/${{ matrix.name }}.txt
+
+      - name: Upload digest artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: digest-${{ matrix.name }}
+          path: /tmp/digests/${{ matrix.name }}.txt
+          retention-days: 1
+
+  checksums:
+    name: Publish image digests
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name != 'pull_request'
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all digests
+        uses: actions/download-artifact@v4
+        with:
+          pattern: digest-*
+          path: /tmp/digests
+          merge-multiple: true
+
+      - name: Build checksums file
+        run: |
+          cd /tmp/digests
+          echo "# KubeNova image digests — $(date -u +%Y-%m-%dT%H:%M:%SZ)" > checksums.sha256
+          echo "# Registry: ghcr.io/${{ github.repository_owner }}" >> checksums.sha256
+          echo "" >> checksums.sha256
+          for f in *.txt; do
+            name="${f%.txt}"
+            digest=$(cat "$f")
+            echo "${digest}  ghcr.io/${{ github.repository_owner }}/${name}" >> checksums.sha256
+          done
+          cat checksums.sha256
+
+      - name: Upload checksums as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: checksums
+          path: /tmp/digests/checksums.sha256
+          retention-days: 90

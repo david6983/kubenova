@@ -17,9 +17,9 @@ spec:
     spec:
       containers:
         - name: ui
-          image: ghcr.io/YOUR_ORG/kubenova-ui:latest
+          image: ghcr.io/david6983/kubenova-ui:latest
           ports:
-            - containerPort: 80
+            - containerPort: 8080
           env:
             - name: SERVER_HOST
               value: kubenova-server
@@ -35,7 +35,7 @@ spec:
           readinessProbe:
             httpGet:
               path: /
-              port: 80
+              port: 8080
             initialDelaySeconds: 3
             periodSeconds: 10
 ---
@@ -49,5 +49,5 @@ spec:
     app: kubenova-ui
   ports:
     - port: 80
-      targetPort: 80
+      targetPort: 8080
   type: ClusterIP

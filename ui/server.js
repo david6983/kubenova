@@ -1,20 +1,22 @@
 import { createServer }  from 'http'
-import { execSync }      from 'child_process'
+import { execFileSync }  from 'child_process'
 import { WebSocketServer, WebSocket } from 'ws'
 
 // Set KUBENOVA_CONTEXT to a kubeconfig context name for local use.
 // Leave empty (default) when running in-cluster — kubectl will use the service account.
-const CONTEXT    = process.env.KUBENOVA_CONTEXT ?? 'kind-shopnova-prod'
+const CONTEXT    = process.env.KUBENOVA_CONTEXT ?? ''
 const PORT       = Number(process.env.PORT) || 3001
 const AGENT_NS   = 'kube-system'
 const AGENT_PORT = 7777
 
 // ── kubectl helpers ────────────────────────────────────────────────────────────
+// execFileSync (not execSync) — args are passed as an array, never through a
+// shell. This eliminates shell injection regardless of what values they contain.
 
-function kubectl(cmd) {
-  const ctx = CONTEXT ? `--context=${CONTEXT}` : ''
+function kubectl(...args) {
+  const ctxArgs = CONTEXT ? [`--context=${CONTEXT}`] : []
   return JSON.parse(
-    execSync(`kubectl ${ctx} ${cmd} -o json`, {
+    execFileSync('kubectl', [...ctxArgs, ...args, '-o', 'json'], {
       encoding: 'utf8',
       timeout: 8000,
       stdio: ['pipe', 'pipe', 'pipe'],
@@ -24,9 +26,10 @@ function kubectl(cmd) {
 
 // Hit a pod's HTTP endpoint through the kube-apiserver proxy — no port-forward needed.
 function kubectlProxy(podName, path) {
-  const ctx = CONTEXT ? `--context=${CONTEXT}` : ''
-  const raw = execSync(
-    `kubectl ${ctx} get --raw "/api/v1/namespaces/${AGENT_NS}/pods/${podName}:${AGENT_PORT}/proxy${path}"`,
+  const ctxArgs = CONTEXT ? [`--context=${CONTEXT}`] : []
+  const raw = execFileSync(
+    'kubectl',
+    [...ctxArgs, 'get', '--raw', `/api/v1/namespaces/${AGENT_NS}/pods/${podName}:${AGENT_PORT}/proxy${path}`],
     { encoding: 'utf8', timeout: 5000 }
   )
   return JSON.parse(raw)
@@ -78,7 +81,7 @@ let podMetricsMap = new Map()
 // Discover running ebpf-agent pod names
 function getAgentPods() {
   try {
-    const list = kubectl(`get pods -n ${AGENT_NS} -l app=ebpf-agent`)
+    const list = kubectl('get', 'pods', '-n', AGENT_NS, '-l', 'app=ebpf-agent')
     return list.items
       .filter(p => p.status?.phase === 'Running')
       .map(p => p.metadata.name)
@@ -145,8 +148,8 @@ function resolveMetrics(podName, namespace, kind) {
 // ── Build cluster topology + merge eBPF metrics ───────────────────────────────
 
 function buildCluster() {
-  const nodeList = kubectl('get nodes')
-  const podList  = kubectl('get pods -A')
+  const nodeList = kubectl('get', 'nodes')
+  const podList  = kubectl('get', 'pods', '-A')
 
   const podsByNode = {}
   for (const pod of podList.items) {
@@ -180,12 +183,12 @@ function buildCluster() {
     return { id: name, name, role: isCP ? 'control-plane' : 'worker', cpuPct: avgCpu, memPct: avgMem, ready, pods }
   })
 
-  return { name: 'shopnova-prod', nodes, flows: ebpfFlows }
+  return { name: CONTEXT || 'in-cluster', nodes, flows: ebpfFlows }
 }
 
 function buildEvents() {
   try {
-    const evList = kubectl('get events -A --sort-by=.lastTimestamp')
+    const evList = kubectl('get', 'events', '-A', '--sort-by=.lastTimestamp')
     return evList.items
       .slice(-30).reverse()
       .filter(ev => ev.type === 'Warning' || RESOLVED_REASONS.has(ev.reason))

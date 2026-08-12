@@ -1,0 +1,34 @@
+## Local full-stack — builds both images from source and wires them together.
+## Set KUBENOVA_CONTEXT to your kubectl context name (default: kind-shopnova-prod).
+##
+##   docker compose up --build
+##   open http://localhost:8080
+##
+## For SIM mode just open http://localhost:5173 after: cd ui && npm run dev
+
+services:
+  server:
+    build:
+      context: ui
+      dockerfile: Dockerfile.server
+    environment:
+      KUBENOVA_CONTEXT: ${KUBENOVA_CONTEXT:-kind-shopnova-prod}
+      NODE_ENV: production
+    volumes:
+      - ${HOME}/.kube:/home/kubenova/.kube:ro
+    ports:
+      - "3001:3001"
+    restart: unless-stopped
+
+  ui:
+    build:
+      context: ui
+      dockerfile: Dockerfile
+    environment:
+      SERVER_HOST: server
+      SERVER_PORT: "3001"
+    ports:
+      - "8080:8080"
+    depends_on:
+      - server
+    restart: unless-stopped

@@ -51,6 +51,7 @@ const KIND_SHORT: Record<Pod['workloadKind'], string> = {
   deployment:  'deploy',
   statefulset: 'sts',
   daemonset:   'ds',
+  cronjob:     'cj',
   other:       '?',
 }
 

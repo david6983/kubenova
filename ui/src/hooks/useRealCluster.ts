@@ -11,7 +11,7 @@ const POLL_MS     = 8000
 const MAX_BACKOFF = 30_000
 
 export function useRealCluster(): { cluster: Cluster; events: SimEvent[] } {
-  const [cluster, setCluster] = useState<Cluster>({ name: 'shopnova-prod', nodes: [] })
+  const [cluster, setCluster] = useState<Cluster>({ name: 'connecting…', nodes: [] })
   const [events,  setEvents]  = useState<SimEvent[]>([])
 
   const wsRef      = useRef<WebSocket | null>(null)

@@ -191,21 +191,22 @@ export const Ship = memo(function Ship({ node, position, targetSize = 16, nsColo
       )}
 
       {hovered && (
-        <Html distanceFactor={80} position={[0, targetSize * 0.9, 0]}>
+        <Html distanceFactor={55} position={[0, targetSize * 0.9, 0]}>
           <div style={{
-            background: 'rgba(0,5,20,0.92)',
+            background: 'rgba(0,5,20,0.94)',
             border: `1px solid ${ringColor}`,
-            borderRadius: 4,
-            padding: '6px 10px',
+            borderRadius: 5,
+            padding: '8px 13px',
             color: '#c0e8ff',
-            fontFamily: 'monospace',
-            fontSize: 11,
+            fontFamily: '"DM Mono", monospace',
+            fontSize: 13,
             whiteSpace: 'nowrap',
             pointerEvents: 'none',
+            boxShadow: `0 0 12px ${ringColor}44`,
           }}>
-            <div style={{ color: ringColor, fontWeight: 'bold', marginBottom: 3 }}>{node.name}</div>
+            <div style={{ color: ringColor, fontWeight: 'bold', marginBottom: 4, fontSize: 14 }}>{node.name}</div>
             <div>CPU {Math.round(node.cpuPct * 100)}%  MEM {Math.round(node.memPct * 100)}%</div>
-            <div style={{ color: '#6090b0', marginTop: 2 }}>{node.pods.length} pods · {node.role}</div>
+            <div style={{ color: '#6090b0', marginTop: 3, fontSize: 12 }}>{node.pods.length} pods · {node.role}</div>
           </div>
         </Html>
       )}
