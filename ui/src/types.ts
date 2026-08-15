@@ -28,7 +28,7 @@ export interface NetworkFlow {
   dstPod:      string
   dstNs:       string
   bytesPerSec: number
-  connections: number
+  packets?: number
   latencyMs:   number
 }
 

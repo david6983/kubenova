@@ -709,9 +709,9 @@ func main() {
 
 	initK8sClient()
 
-	// Remove memlock limit for BPF maps
+	// Remove memlock limit for BPF maps (no-op on kernel >= 5.11 which uses memcg instead)
 	if err := rlimit.RemoveMemlock(); err != nil {
-		log.Fatalf("[ebpf] remove memlock: %v", err)
+		log.Printf("[ebpf] remove memlock skipped: %v (continuing — kernel >= 5.11 does not require it)", err)
 	}
 
 	// Load BPF objects (compiled by bpf2go into flowtracker_bpfeb/el.go)

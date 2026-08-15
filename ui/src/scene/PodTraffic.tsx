@@ -81,6 +81,29 @@ export function PodTraffic({ nodePositions, cluster, speedMult = 1, trafficLevel
     [cluster],
   )
 
+  // Real flow intensity per node-pair (from eBPF), keyed as sorted "nodeA↔nodeB"
+  const realIntensity = useMemo(() => {
+    if (!cluster.flows?.length) return new Map<string, number>()
+    const byteMap = new Map<string, number>()
+    for (const flow of cluster.flows) {
+      for (const srcNode of cluster.nodes) {
+        const srcMatch = srcNode.pods.some(p => p.name === flow.srcPod || p.name.startsWith(flow.srcPod + '-'))
+        if (!srcMatch) continue
+        for (const dstNode of cluster.nodes) {
+          if (dstNode.id === srcNode.id) continue
+          const dstMatch = dstNode.pods.some(p => p.name === flow.dstPod || p.name.startsWith(flow.dstPod + '-'))
+          if (!dstMatch) continue
+          const key = [srcNode.id, dstNode.id].sort().join('↔')
+          byteMap.set(key, (byteMap.get(key) ?? 0) + (flow.bytesPerSec ?? 0) + (flow.packets ?? 0) * 10)
+        }
+      }
+    }
+    const max = Math.max(...byteMap.values(), 1)
+    const result = new Map<string, number>()
+    byteMap.forEach((v, k) => result.set(k, 0.30 + (v / max) * 0.70))
+    return result
+  }, [cluster])
+
   const edges = useMemo<ComputedEdge[]>(() => {
     const svcGraph = buildSvcGraph(nodePositions, cpSet)
     return svcGraph.flatMap(e => {
@@ -95,9 +118,11 @@ export function PodTraffic({ nodePositions, cluster, speedMult = 1, trafficLevel
       const dst = podFormationPos(tp, cpSet.has(e.to),   toPods,   dstCol)
       const mid = src.clone().lerp(dst, 0.5)
       mid.y += src.distanceTo(dst) * 0.04
-      return [{ curve: new CatmullRomCurve3([src, mid, dst]), color: new Color(COLOR[e.kind]), intensity: e.intensity }]
+      const realKey = [e.from, e.to].sort().join('↔')
+      const intensity = realIntensity.get(realKey) ?? e.intensity
+      return [{ curve: new CatmullRomCurve3([src, mid, dst]), color: new Color(COLOR[e.kind]), intensity }]
     })
-  }, [nodePositions, cpSet, nodeMap])
+  }, [nodePositions, cpSet, nodeMap, realIntensity])
 
   // ── Static lines ─────────────────────────────────────────────────────────────
   const lineObjs = useMemo(() =>

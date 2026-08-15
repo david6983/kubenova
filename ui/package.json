@@ -3,21 +3,25 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "packageManager": "pnpm@10.2.1",
   "scripts": {
     "dev": "vite",
     "server": "node server.js",
+    "chaos": "node chaos.js",
+    "live": "concurrently -n server,chaos,ui -c blue,red,green \"node server.js\" \"node chaos.js\" \"vite\"",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview"
   },
   "dependencies": {
-    "ws": "^8.18.0",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.1",
     "@react-three/postprocessing": "^3.0.4",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "three": "^0.185.0",
+    "three-stdlib": "^2.36.1",
+    "ws": "^8.18.0",
     "zustand": "^5.0.14"
   },
   "devDependencies": {
@@ -26,6 +30,7 @@
     "@types/react-dom": "^19.2.3",
     "@types/three": "^0.184.1",
     "@vitejs/plugin-react": "^6.0.2",
+    "concurrently": "^10.0.4",
     "oxlint": "^1.69.0",
     "typescript": "~6.0.2",
     "vite": "^8.1.0"

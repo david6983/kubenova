@@ -5,9 +5,9 @@ services:
     ports:
       - "9666:9666"
     volumes:
-      - "./kubeconfig.yaml:/root/.kube/config:ro"
+      - "./kubeconfig.yaml:/home/chaos/.kube/config:ro"
     restart: unless-stopped
     environment:
-      - KUBECONFIG=/root/.kube/config
+      - KUBECONFIG=/home/chaos/.kube/config
     extra_hosts:
       - "host.docker.internal:host-gateway"

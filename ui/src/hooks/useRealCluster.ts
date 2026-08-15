@@ -10,9 +10,21 @@ const WS_TIMEOUT  = 3000   // fall back to HTTP if WS not established within thi
 const POLL_MS     = 8000
 const MAX_BACKOFF = 30_000
 
+function parsePayload(data: { cluster: Cluster | null; events: SimEvent[] | null; error?: string | null }, prev: Cluster): { cluster: Cluster; events: SimEvent[] } {
+  if (!data.cluster) {
+    const reason = data.error ?? 'cluster unreachable'
+    return {
+      cluster: { ...prev, name: prev.name.startsWith('⚠') ? prev.name : `⚠ ${prev.name}`, nodes: [] },
+      events: [{ id: 'err', t: 0, severity: 'critical', message: reason }],
+    }
+  }
+  return { cluster: data.cluster, events: data.events ?? [] }
+}
+
 export function useRealCluster(): { cluster: Cluster; events: SimEvent[] } {
   const [cluster, setCluster] = useState<Cluster>({ name: 'connecting…', nodes: [] })
   const [events,  setEvents]  = useState<SimEvent[]>([])
+  const clusterRef = useRef<Cluster>({ name: 'connecting…', nodes: [] })
 
   const wsRef      = useRef<WebSocket | null>(null)
   const timerRef   = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -32,8 +44,10 @@ export function useRealCluster(): { cluster: Cluster; events: SimEvent[] } {
           if (!res.ok) throw new Error(`HTTP ${res.status}`)
           const data = await res.json()
           if (activeRef.current) {
-            setCluster(data.cluster)
-            setEvents(data.events ?? [])
+            const parsed = parsePayload(data, clusterRef.current)
+            clusterRef.current = parsed.cluster
+            setCluster(parsed.cluster)
+            setEvents(parsed.events)
           }
         } catch (err) {
           console.warn('[useRealCluster] poll error:', err)
@@ -80,8 +94,10 @@ export function useRealCluster(): { cluster: Cluster; events: SimEvent[] } {
         if (!activeRef.current) return
         try {
           const data = JSON.parse(e.data)
-          setCluster(data.cluster)
-          setEvents(data.events ?? [])
+          const parsed = parsePayload(data, clusterRef.current)
+          clusterRef.current = parsed.cluster
+          setCluster(parsed.cluster)
+          setEvents(parsed.events)
         } catch (err) {
           console.warn('[useRealCluster] WS parse error:', err)
         }

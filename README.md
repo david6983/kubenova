@@ -1,34 +1,60 @@
-# KubeNova
+<div align="center">
 
-**Kubernetes monitoring reimagined as a 3D space fleet.**
+<strong>🛰️ AMBIENT KUBERNETES VISUALIZATION</strong>
 
-<p align="center">
-  <img src="docs/screenshots/kubenova-ui-simulator-high-traffic.png" alt="KubeNova fleet in high-traffic storm" width="100%">
-</p>
+# 🚀 KubeNova
 
-<p align="center">
-  <img src="docs/screenshots/kubenova-ui-demo-crew-view.png" alt="KubeNova crew panel" width="100%">
-</p>
+### Your cluster, reimagined as a 3D space fleet.
+
+Nodes become capital ships. Pods become fighter craft flying in squadron formation. A nebula
+storm swells when cluster health degrades, and pods explode in the void when they crash.
+
+**[🛸 Start training your fleet](#-quick-start)** · [See the loop](#-how-it-flows) · [What's inside](#-whats-in-the-box) · [Read the security model](#-security-model)
+
+[![License](https://img.shields.io/badge/license-MIT-4c8bf5.svg)](LICENSE)
+![Status](https://img.shields.io/badge/status-early%20preview-f59e0b.svg)
+[![Docker builds](https://github.com/david6983/kubenova/actions/workflows/docker.yml/badge.svg)](https://github.com/david6983/kubenova/actions/workflows/docker.yml)
+![Stack](https://img.shields.io/badge/stack-React%20%7C%20Three.js%20%7C%20Go%20eBPF-111827.svg)
+
+</div>
 
 <p align="center">
   <video src="docs/screenshots/simulator-demo.mp4" autoplay loop muted playsinline width="100%"></video>
 </p>
 
-Instead of dashboards and graphs, you command an armada — nodes are capital ships, pods are fighter craft flying in squadron formations around each vessel. The captain announces alerts. Nebula storm intensity reflects cluster health. When pods crash, they explode in the void.
+No dashboards, no graphs to parse — just a living scene you can read at a glance from across
+the room. Toggle **SIM** for a fully offline demo, or **LIVE** to fly your real cluster, backed
+by an eBPF agent that reads real pod CPU/mem and network flows.
 
-> This is an early preview. The core 3D visualization works and the eBPF agent is functional. A lot is still being built.
+> [!IMPORTANT]
+> This is an early preview. The 3D visualization and the eBPF metrics agent both work today.
+> A lot of the roadmap below is still being built.
 
----
+## ✨ Why a space fleet
 
-## Inspiration
+<table>
+  <tr>
+    <td width="33%" valign="top">
+      <h3>🛰️ Ambient by design</h3>
+      No alerts to triage or panels to click through. Put it on a screen in the office, let it
+      run, and glance at it instead of a dashboard.
+    </td>
+    <td width="33%" valign="top">
+      <h3>📡 Real telemetry, not theater</h3>
+      A Go eBPF agent attaches TC hooks to every pod veth interface for real pod-to-pod network
+      flows, plus real CPU/mem via cgroupv2 — the storm reflects actual cluster health.
+    </td>
+    <td width="33%" valign="top">
+      <h3>🌌 SIM or LIVE, anytime</h3>
+      SIM mode runs a fully offline, seeded simulation — pod crashes, node flapping, crashloop
+      storms — so you can see the whole thing before pointing it at a real cluster.
+    </td>
+  </tr>
+</table>
 
-I was fascinated by *Ender's Game* — both the book and the film. The idea that a commander could observe an entire battle as a living, moving system, understand its state at a glance, and act on instinct rather than spreadsheets. That's what I wanted for Kubernetes. Your cluster deserves the same kind of situational awareness Ender had in the Command Room.
-
-## The Idea
-
-Your cluster is alive — nodes humming, pods spawning, traffic flowing between services. KubeNova makes that visible as something beautiful: a space fleet drifting through the void, fighter craft in formation, nebula storms swelling when things get rough.
-
-Put it on a screen in the office. Let it run. Glance at it. You'll know.
+*Ender's Game* is the inspiration: a commander watching an entire battle as one living system,
+reading its state at a glance and acting on instinct instead of spreadsheets. That's the
+situational awareness a cluster deserves too.
 
 | KubeNova | Kubernetes |
 |---|---|
@@ -40,9 +66,44 @@ Put it on a screen in the office. Let it run. Glance at it. You'll know.
 | Nebula storm | Cluster health |
 | Crew aboard | Your ops team |
 
----
+## 👀 See it flying
 
-## Quick Start
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <a href="docs/screenshots/kubenova-ui-simulator-high-traffic.png"><img src="docs/screenshots/kubenova-ui-simulator-high-traffic.png" alt="KubeNova fleet formation flying through a high-intensity nebula storm" width="440"></a><br>
+      <sub><b>Storm intensity is cluster health.</b><br>The worse things get, the more violent the nebula.</sub>
+    </td>
+    <td width="50%" align="center">
+      <a href="docs/screenshots/kubenova-ui-demo-crew-view.png"><img src="docs/screenshots/kubenova-ui-demo-crew-view.png" alt="KubeNova crew roster showing Captain Alex Chen's certifications and rank progression" width="440"></a><br>
+      <sub><b>Crew aboard, ranked and certified.</b><br>Captain Alex Chen — 13/16 certs, rank progression from Recruit to Fleet Admiral.</sub>
+    </td>
+  </tr>
+</table>
+
+In LIVE mode, that view is a direct read of your real cluster — the fleet above maps one-to-one
+onto ordinary `kubectl` output:
+
+```bash
+$ kubectl get nodes
+NAME                STATUS   ROLES           AGE   VERSION
+dev-control-plane   Ready    control-plane   21h   v1.36.1
+dev-worker          Ready    <none>          21h   v1.36.1
+dev-worker2         Ready    <none>          21h   v1.36.1
+
+$ kubectl get pods -n app
+NAME                          READY   STATUS    RESTARTS   AGE
+api-56f8c69fd7-n66xc          1/1     Running   0          19h
+api-56f8c69fd7-wmxlt          1/1     Running   0          19h
+traffic-gen-ff8566c5b-l27pv   1/1     Running   0          20h
+worker-785fc649f7-6gkqz       1/1     Running   0          19h
+worker-785fc649f7-w5vrv       1/1     Running   0          19h
+```
+
+Three nodes become three capital ships; each `Running` pod becomes a fighter craft in that
+ship's squadron. No mapping to configure — KubeNova reads it straight off the API.
+
+## 🚀 Quick Start
 
 ### Option 1 — SIM mode, no cluster needed (30 seconds)
 
@@ -51,14 +112,13 @@ Just Node.js required.
 ```bash
 git clone https://github.com/david6983/kubenova.git
 cd kubenova/ui
-npm install
-npm run dev
+pnpm install
+pnpm dev
 # open http://localhost:5173
 ```
 
-Toggle **SIM** in the top-right corner. The simulation fires random events: pod crashes, node flapping, traffic spikes, crashloop storms.
-
----
+Toggle **SIM** in the top-right corner. The simulation fires random events: pod crashes, node
+flapping, traffic spikes, crashloop storms.
 
 ### Option 2 — Live mode, local dev
 
@@ -69,11 +129,11 @@ Requirements: `kubectl` configured against any running cluster, Node.js 20+.
 ```bash
 # Terminal 1 — backend (point at your cluster context)
 cd kubenova/ui
-npm install
+pnpm install
 KUBENOVA_CONTEXT=my-cluster node server.js
 
 # Terminal 2 — UI
-npm run dev
+pnpm dev
 # open http://localhost:5173 → toggle LIVE
 ```
 
@@ -103,13 +163,11 @@ kubectl apply -f k8s/shopnova-prod/limitrange.yaml
 cd ebpf-agent && make deploy && cd ..
 
 # Start backend + UI
-cd ui && npm install
+cd ui && pnpm install
 KUBENOVA_CONTEXT=kind-shopnova-prod node server.js &
-npm run dev
+pnpm dev
 # open http://localhost:5173 → toggle LIVE
 ```
-
----
 
 ### Option 3 — Install in your cluster via Helm
 
@@ -138,7 +196,9 @@ helm install kubenova ./charts/kubenova \
   --set ingress.host=kubenova.yourcompany.com
 ```
 
-The eBPF DaemonSet is enabled by default — it needs a real Linux kernel (any standard cloud cluster works). On macOS KinD or without eBPF support:
+The eBPF agent runs `privileged: true` with `NET_ADMIN`/`SYS_ADMIN` capabilities — it needs
+that to attach TC hooks to a real Linux kernel (any standard cloud cluster works). On macOS
+KinD or without eBPF support, disable it and KubeNova falls back to `kubectl top` for CPU/mem:
 
 ```bash
 --set ebpfAgent.enabled=false
@@ -152,9 +212,17 @@ kubectl apply -k k8s/kubenova/
 kubectl apply -f ebpf-agent/deploy/daemonset.yaml
 ```
 
----
+## 🛰️ How it flows
 
-## What's in the Box
+```mermaid
+flowchart LR
+    A["☸️ Kubernetes cluster"] -->|"kubectl + eBPF TC hooks"| B["🖥️ ui/server.js :3001"]
+    B -->|"WebSocket, every 2s"| C["🌌 React fleet :5173"]
+    C -->|"SIM mode"| D["🎲 Seeded simulation"]
+    C -->|"LIVE mode"| E["📡 Real cluster state"]
+```
+
+## 🗂️ What's in the Box
 
 | Directory | What it does |
 |---|---|
@@ -165,11 +233,9 @@ kubectl apply -f ebpf-agent/deploy/daemonset.yaml
 | `k8s/shopnova-prod/` | Demo KinD cluster — 5 nodes, 20+ nginx workloads, live traffic generator |
 | `assets/models/` | Source 3D models (CC0, by @Quaternius) |
 
----
+## 🏗️ Architecture
 
-## Architecture
-
-```
+```text
 Kubernetes cluster
   └─ ebpf-agent DaemonSet (Go)
        ├─ TC egress eBPF hooks  → pod-to-pod network flows
@@ -187,13 +253,26 @@ ui/ (React + Three.js, :5173)
   └─ LIVE mode — real cluster via server.js WebSocket
 ```
 
-The eBPF agent attaches TC egress hooks to every pod veth interface, maintains a BPF LRU hash map keyed by (src_ip, dst_ip, src_port, dst_port, proto), and resolves IPs against the Kubernetes API — including ClusterIPs — to produce named pod-to-pod flows.
+The eBPF agent attaches TC egress hooks to every pod veth interface, maintains a BPF LRU hash
+map keyed by (src_ip, dst_ip, src_port, dst_port, proto), and resolves IPs against the
+Kubernetes API — including ClusterIPs — to produce named pod-to-pod flows.
 
----
+## 🔐 Security model
 
-## Roadmap
+Only one piece of KubeNova runs privileged, and it's the one that has to be:
 
-### Step 1 — Observe (in progress)
+| Component | Runs as | Capabilities |
+|---|---|---|
+| `ebpf-agent` DaemonSet | root (`runAsUser: 0`), `privileged: true` | `NET_ADMIN`, `SYS_ADMIN` — required to attach TC hooks to a real kernel |
+| `ui` (nginx) | non-root (uid 101) | `allowPrivilegeEscalation: false`, all capabilities dropped |
+| `server` (Node.js) | non-root (uid 1000), read-only root filesystem | `allowPrivilegeEscalation: false`, all capabilities dropped |
+
+Set `--set ebpfAgent.enabled=false` to run without the privileged DaemonSet entirely — KubeNova
+falls back to `kubectl top` for CPU/mem and simply won't show real network flows.
+
+## 🧭 Roadmap
+
+### Step 1 — Observe (MVP, done)
 - [x] 3D space fleet: nodes as capital ships, pods as fighter craft in formations
 - [x] East-West traffic flows between ships
 - [x] North-South inbound traffic (fire from deep space)
@@ -201,8 +280,7 @@ The eBPF agent attaches TC egress hooks to every pod veth interface, maintains a
 - [x] HUD: namespace legend, alert log, node detail panel
 - [x] Real eBPF agent: pod CPU/mem + network flows
 - [x] Demo cluster with realistic workloads and live traffic
-- [ ] AI Captain voice/text announcements for K8s events
-- [ ] Wire real eBPF flows into traffic visualization
+- [x] Wire real eBPF flows into traffic visualization
 
 ### Step 2 — Explore
 - [ ] Interior ship view: each compartment = a pod
@@ -220,9 +298,18 @@ The eBPF agent attaches TC egress hooks to every pod veth interface, maintains a
 - [ ] RBAC as military ranks (Admiral, Captain, Ensign)
 - [ ] Kubernetes learning mode
 
----
+<details>
+<summary><b>🚧 Current limitations</b></summary>
 
-## Contributing
+- Early preview — expect rough edges outside SIM mode and the core fleet view.
+- Real network flows require the privileged eBPF DaemonSet on a real Linux kernel; macOS KinD
+  and clusters without eBPF support fall back to `kubectl top` metrics with no flow data.
+- Multi-cluster and Game Mode are not built yet — see the roadmap above.
+- No built-in TLS on the Helm chart's ingress; bring your own via `ingress.tls`.
+
+</details>
+
+## 🤝 Contributing
 
 This project is in early development. The best way to contribute right now:
 
@@ -234,7 +321,17 @@ See `AGENTS.md` for codebase architecture and coding rules.
 
 ---
 
-## License
+<div align="center">
+
+### Ready to take command? 🌌
+
+Clone it, toggle SIM, and watch your cluster fly.
+
+**[🛸 Jump to quick start](#-quick-start)**
+
+</div>
+
+## 📄 License
 
 MIT — see [LICENSE](LICENSE).
 

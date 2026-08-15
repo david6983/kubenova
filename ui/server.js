@@ -4,7 +4,7 @@ import { WebSocketServer, WebSocket } from 'ws'
 
 // Set KUBENOVA_CONTEXT to a kubeconfig context name for local use.
 // Leave empty (default) when running in-cluster — kubectl will use the service account.
-const CONTEXT    = process.env.KUBENOVA_CONTEXT ?? ''
+let CONTEXT    = process.env.KUBENOVA_CONTEXT ?? ''
 const PORT       = Number(process.env.PORT) || 3001
 const AGENT_NS   = 'kube-system'
 const AGENT_PORT = 7777
@@ -62,21 +62,23 @@ function podStatus(pod) {
 }
 
 const CRITICAL_REASONS = new Set(['BackOff', 'OOMKilling', 'Evicted', 'NodeNotReady'])
+const WARN_REASONS     = new Set(['Killing', 'Failed', 'Unhealthy', 'FailedMount'])
 const RESOLVED_REASONS = new Set(['Pulled', 'Started', 'Created', 'NodeReady'])
 
 function eventSeverity(ev) {
   if (ev.type === 'Warning') {
     return CRITICAL_REASONS.has(ev.reason) ? 'critical' : 'warn'
   }
+  if (WARN_REASONS.has(ev.reason)) return 'warn'
   return RESOLVED_REASONS.has(ev.reason) ? 'resolved' : 'info'
 }
 
 // ── eBPF agent state ──────────────────────────────────────────────────────────
-// Collected from all per-node ebpf-agent pods every 2s.
-// podMetricsMap: "pod-name/namespace" → { cpuPct, memPct }
+// When an eBPF DaemonSet is running, flows and pod metrics come from it.
+// Falls back to kubectl-top metrics when the agent is absent.
 
 let ebpfFlows    = []
-let podMetricsMap = new Map()
+let podMetricsMap = new Map()  // "pod-name/namespace" → { cpuPct, memPct }
 
 // Discover running ebpf-agent pod names
 function getAgentPods() {
@@ -90,7 +92,7 @@ function getAgentPods() {
   }
 }
 
-// Pull metrics from all agent pods and merge
+// Pull metrics from all eBPF agent pods and merge
 function pullEbpfMetrics() {
   const agentPods = getAgentPods()
   if (agentPods.length === 0) return
@@ -101,13 +103,9 @@ function pullEbpfMetrics() {
   for (const podName of agentPods) {
     try {
       const snap = kubectlProxy(podName, '/metrics')
-
-      for (const flow of (snap.flows ?? [])) {
-        allFlows.push(flow)
-      }
-      for (const pm of (snap.podMetrics ?? [])) {
+      for (const flow of (snap.flows ?? [])) allFlows.push(flow)
+      for (const pm of (snap.podMetrics ?? []))
         newMetrics.set(`${pm.pod}/${pm.ns}`, { cpuPct: pm.cpuPct, memPct: pm.memPct })
-      }
     } catch (err) {
       console.warn(`[ebpf-agent] failed to pull from ${podName}: ${err.message}`)
     }
@@ -117,7 +115,80 @@ function pullEbpfMetrics() {
   podMetricsMap = newMetrics
 }
 
-// ── Fallback metrics (used before eBPF agent has data for a pod) ──────────────
+// ── kubectl top metrics (real CPU/mem without eBPF agent) ─────────────────────
+// Parses `kubectl top pods -A --no-headers` output.
+// Format: NAMESPACE  NAME  CPU(cores)  MEMORY(bytes)
+// Node limits come from the node allocatable capacity.
+
+let nodeAllocatable = new Map()  // nodeName → { cpuMillis, memBytes }
+
+function pullKubectlTopMetrics() {
+  // Skip if eBPF agent already provides metrics
+  if (podMetricsMap.size > 0) return
+
+  try {
+    // Refresh node allocatable (cheap, cached across calls)
+    if (nodeAllocatable.size === 0) {
+      const nodes = kubectl('get', 'nodes')
+      for (const n of nodes.items) {
+        const cpu = parseCpuToMillis(n.status?.allocatable?.cpu ?? '1000m')
+        const mem = parseMemToBytes(n.status?.allocatable?.memory ?? '1Gi')
+        nodeAllocatable.set(n.metadata.name, { cpuMillis: cpu, memBytes: mem })
+      }
+    }
+
+    const ctxArgs = CONTEXT ? [`--context=${CONTEXT}`] : []
+    const raw = execFileSync(
+      'kubectl',
+      [...ctxArgs, 'top', 'pods', '-A', '--no-headers'],
+      { encoding: 'utf8', timeout: 10000 }
+    )
+
+    // Average allocatable across all nodes as denominator
+    let totalCpu = 0, totalMem = 0, count = 0
+    for (const { cpuMillis, memBytes } of nodeAllocatable.values()) {
+      totalCpu += cpuMillis; totalMem += memBytes; count++
+    }
+    const avgCpuMillis = count ? totalCpu / count : 1000
+    const avgMemBytes  = count ? totalMem / count : 1_073_741_824
+
+    const newMetrics = new Map()
+    for (const line of raw.trim().split('\n')) {
+      const parts = line.trim().split(/\s+/)
+      if (parts.length < 4) continue
+      const [ns, name, cpuRaw, memRaw] = parts
+      const cpuMillis = parseCpuToMillis(cpuRaw)
+      const memBytes  = parseMemToBytes(memRaw)
+      newMetrics.set(`${name}/${ns}`, {
+        cpuPct: Math.min(0.99, cpuMillis / avgCpuMillis),
+        memPct: Math.min(0.99, memBytes  / avgMemBytes),
+      })
+    }
+    if (newMetrics.size > 0) podMetricsMap = newMetrics
+  } catch (err) {
+    // Metrics Server not installed or not ready — silently keep fallback
+    if (!err.message?.includes('Metrics API not available')) {
+      console.warn('[metrics] kubectl top error:', err.message)
+    }
+  }
+}
+
+function parseCpuToMillis(s) {
+  if (!s) return 0
+  if (s.endsWith('m')) return parseInt(s, 10)
+  return Math.round(parseFloat(s) * 1000)
+}
+
+function parseMemToBytes(s) {
+  if (!s) return 0
+  const units = { Ki: 1024, Mi: 1024**2, Gi: 1024**3, Ti: 1024**4, k: 1000, M: 1000**2, G: 1000**3 }
+  for (const [suffix, mult] of Object.entries(units)) {
+    if (s.endsWith(suffix)) return parseInt(s, 10) * mult
+  }
+  return parseInt(s, 10)
+}
+
+// ── Fallback metrics (used when neither eBPF agent nor Metrics Server is available) ──
 
 function stableBase(name, salt) {
   let h = salt
@@ -189,15 +260,38 @@ function buildCluster() {
 function buildEvents() {
   try {
     const evList = kubectl('get', 'events', '-A', '--sort-by=.lastTimestamp')
-    return evList.items
-      .slice(-30).reverse()
-      .filter(ev => ev.type === 'Warning' || RESOLVED_REASONS.has(ev.reason))
-      .slice(0, 20)
+    const events = evList.items
+      .slice(-40).reverse()
+      .filter(ev => ev.type === 'Warning' || RESOLVED_REASONS.has(ev.reason) || WARN_REASONS.has(ev.reason))
+      .slice(0, 18)
       .map(ev => ({
         id:       ev.metadata.uid,
         severity: eventSeverity(ev),
-        message:  `${ev.involvedObject?.name ?? '?'} — ${ev.message ?? ev.reason}`,
+        message:  `${ev.involvedObject?.name ?? '?'} — ${ev.message ?? ev.reason}`.replace(/[\x00-\x1f\x7f]/g, ' ').trim(),
       }))
+
+    // Scan pods for OOMKilled containers — K8s doesn't emit OOMKilling events
+    // for cgroup-level OOM kills, so we synthesize from pod container state.
+    // restartPolicy:Never pods put OOMKill in state.terminated (not lastState).
+    try {
+      const podList = kubectl('get', 'pods', '-A')
+      for (const pod of (podList.items ?? [])) {
+        for (const cs of (pod.status?.containerStatuses ?? [])) {
+          const cur  = cs.state?.terminated
+          const last = cs.lastState?.terminated
+          const oom  = (cur?.reason === 'OOMKilled') ? cur : (last?.reason === 'OOMKilled') ? last : null
+          if (oom) {
+            events.unshift({
+              id:       `oom-${pod.metadata.namespace}-${pod.metadata.name}-${cs.name}`,
+              severity: 'critical',
+              message:  `${pod.metadata.name} — OOMKilled (container ${cs.name}, exit 137)`,
+            })
+          }
+        }
+      }
+    } catch {}
+
+    return events.slice(0, 20)
   } catch {
     return []
   }
@@ -206,11 +300,12 @@ function buildEvents() {
 // ── Cache / snapshot ──────────────────────────────────────────────────────────
 
 const TOPO_TTL_MS  = 30_000
-const EBPF_PULL_MS =  2_000
 
 let cachedCluster = null
 let cachedEvents  = null
 let topoAt        = 0
+
+let lastError = null
 
 function getSnapshot() {
   const now = Date.now()
@@ -219,9 +314,11 @@ function getSnapshot() {
     try {
       cachedCluster = buildCluster()
       cachedEvents  = buildEvents()
+      lastError     = null
       topoAt = now
     } catch (err) {
       console.error('[k8s-server] topology error:', err.message)
+      lastError = err.message
     }
   } else {
     // Merge latest eBPF metrics without hitting kubectl
@@ -242,13 +339,50 @@ function getSnapshot() {
     }
   }
 
-  return { cluster: cachedCluster, events: cachedEvents }
+  return { cluster: cachedCluster, events: cachedEvents, error: lastError }
+}
+
+// ── Context helpers ───────────────────────────────────────────────────────────
+
+function listContexts() {
+  try {
+    const raw = execFileSync('kubectl', ['config', 'get-contexts', '-o', 'name'], {
+      encoding: 'utf8', timeout: 5000,
+    })
+    return raw.trim().split('\n').filter(Boolean)
+  } catch {
+    return []
+  }
+}
+
+function currentKubectlContext() {
+  try {
+    return execFileSync('kubectl', ['config', 'current-context'], {
+      encoding: 'utf8', timeout: 3000,
+    }).trim()
+  } catch {
+    return ''
+  }
+}
+
+function switchContext(name) {
+  const valid = listContexts()
+  if (!valid.includes(name)) throw new Error(`Unknown context: ${name}`)
+  CONTEXT = name
+  cachedCluster = null
+  cachedEvents  = null
+  topoAt = 0
+  console.log(`[k8s-server] switched to context: ${name}`)
 }
 
 // ── HTTP + WebSocket ──────────────────────────────────────────────────────────
 
 const httpServer = createServer((req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+
+  if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return }
 
   if (req.method === 'GET' && req.url === '/api/cluster') {
     try {
@@ -260,6 +394,31 @@ const httpServer = createServer((req, res) => {
       res.writeHead(500, { 'Content-Type': 'application/json' })
       res.end(JSON.stringify({ error: err.message }))
     }
+    return
+  }
+
+  if (req.method === 'GET' && req.url === '/api/contexts') {
+    const contexts = listContexts()
+    const active   = CONTEXT || currentKubectlContext()
+    res.writeHead(200, { 'Content-Type': 'application/json' })
+    res.end(JSON.stringify({ contexts, active }))
+    return
+  }
+
+  if (req.method === 'POST' && req.url === '/api/context') {
+    let body = ''
+    req.on('data', d => { body += d })
+    req.on('end', () => {
+      try {
+        const { context } = JSON.parse(body)
+        switchContext(context)
+        res.writeHead(200, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ ok: true, context }))
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ error: err.message }))
+      }
+    })
     return
   }
 
@@ -278,14 +437,20 @@ wss.on('connection', ws => {
   }
 })
 
-// eBPF pull loop — every 2s
+// Metrics pull loop — every 15s (matches Metrics Server resolution)
+// Prefers eBPF agent; falls back to kubectl top automatically.
+const METRICS_PULL_MS = 15_000
 setInterval(() => {
   try {
     pullEbpfMetrics()
+    pullKubectlTopMetrics()
   } catch (err) {
-    console.warn('[ebpf] pull error:', err.message)
+    console.warn('[metrics] pull error:', err.message)
   }
-}, EBPF_PULL_MS)
+}, METRICS_PULL_MS)
+
+// Initial pull on startup so first snapshot has real data
+pullKubectlTopMetrics()
 
 // Broadcast to UI — every 2s
 setInterval(() => {

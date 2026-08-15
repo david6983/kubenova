@@ -13,12 +13,19 @@ RUN apk add --no-cache curl && \
 # Non-root user
 RUN addgroup -S kubenova && adduser -S -G kubenova kubenova
 
+RUN corepack enable && corepack prepare pnpm@10.2.1 --activate
+
 WORKDIR /app
 
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY ui/package.json ./ui/package.json
+COPY chaos-agent/package.json ./chaos-agent/package.json
+RUN pnpm install --frozen-lockfile --filter ui --prod
 
-COPY --chown=kubenova:kubenova server.js ./
+COPY --chown=kubenova:kubenova ui/server.js ./ui/server.js
+RUN chown -R kubenova:kubenova /app
+
+WORKDIR /app/ui
 
 ENV KUBENOVA_CONTEXT=""
 ENV NODE_ENV=production

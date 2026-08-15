@@ -1,7 +1,18 @@
 IMAGE    := ebpf-agent:latest
-CLUSTER  := shopnova-prod
+CLUSTER  := dev
 CONTEXT  := kind-$(CLUSTER)
 NAMESPACE := kube-system
+
+# Detect host arch and map to Go/Docker naming
+HOST_ARCH := $(shell uname -m)
+ifeq ($(HOST_ARCH),arm64)
+  TARGETARCH := arm64
+else ifeq ($(HOST_ARCH),aarch64)
+  TARGETARCH := arm64
+else
+  TARGETARCH := amd64
+endif
+PLATFORM := linux/$(TARGETARCH)
 
 .PHONY: generate build load deploy undeploy logs
 
@@ -19,10 +30,10 @@ generate:
 	    go generate ./..."
 
 build:
-	docker build -t $(IMAGE) .
+	docker build --platform $(PLATFORM) --build-arg TARGETARCH=$(TARGETARCH) -t $(IMAGE) .
 
 load: build
-ç	kind load docker-image $(IMAGE) --name $(CLUSTER)
+	kind load docker-image $(IMAGE) --name $(CLUSTER)
 
 deploy: load
 	kubectl --context=$(CONTEXT) apply -f deploy/daemonset.yaml

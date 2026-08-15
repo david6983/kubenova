@@ -1,4 +1,4 @@
-import { Suspense, useMemo, useRef, memo } from 'react'
+import { Suspense, useMemo, memo } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Ship, shipAnimRegistry } from './Ship'
 import { Traffic } from './Traffic'
@@ -85,7 +85,58 @@ function deriveStatus(toNodeId: string, cluster: Cluster): Flow['status'] {
   return hasCrash ? 'degraded' : 'ok'
 }
 
-function buildFlows(cluster: Cluster, nodePositions: Record<string, [number,number,number]>): Flow[] {
+// Resolve a pod name OR service name to all nodes that host it.
+// eBPF dstPod can be a service name (e.g. "api") when the dest was a ClusterIP.
+function resolvePodToNodes(podName: string, nodes: import('../types').ClusterNode[]): string[] {
+  const result: string[] = []
+  for (const node of nodes) {
+    if (node.pods.some(p => p.name === podName || p.name.startsWith(podName + '-'))) {
+      result.push(node.id)
+    }
+  }
+  return result
+}
+
+function buildRealFlows(cluster: Cluster, nodePositions: Record<string, [number,number,number]>): Flow[] {
+  if (!cluster.flows?.length) return []
+  const edgeBytes = new Map<string, number>()
+  const edgePkts  = new Map<string, number>()
+
+  for (const flow of cluster.flows) {
+    const srcNodes = resolvePodToNodes(flow.srcPod, cluster.nodes)
+    const dstNodes = resolvePodToNodes(flow.dstPod, cluster.nodes)
+    for (const src of srcNodes) {
+      for (const dst of dstNodes) {
+        if (src === dst || !nodePositions[src] || !nodePositions[dst]) continue
+        const key = `${src}→${dst}`
+        edgeBytes.set(key, (edgeBytes.get(key) ?? 0) + (flow.bytesPerSec ?? 0))
+        edgePkts.set(key,  (edgePkts.get(key)  ?? 0) + (flow.packets    ?? 0))
+      }
+    }
+  }
+
+  if (edgeBytes.size === 0) return []
+
+  const maxBytes = Math.max(...edgeBytes.values(), 1)
+  const maxPkts  = Math.max(...edgePkts.values(),  1)
+
+  return Array.from(edgeBytes.entries()).map(([key, bytes]) => {
+    const [fromId, toId] = key.split('→')
+    const pkts      = edgePkts.get(key) ?? 0
+    const intensity = bytes > 0
+      ? 0.25 + (bytes / maxBytes) * 0.75
+      : 0.15 + (pkts  / maxPkts)  * 0.55
+    return {
+      from:      nodePositions[fromId],
+      to:        nodePositions[toId],
+      type:      'network' as const,
+      status:    deriveStatus(toId, cluster),
+      intensity,
+    }
+  })
+}
+
+function buildSyntheticFlows(cluster: Cluster, nodePositions: Record<string, [number,number,number]>): Flow[] {
   const workers = cluster.nodes.filter(n => n.role === 'worker' && nodePositions[n.id])
   if (workers.length < 2) return []
 
@@ -122,6 +173,11 @@ function buildFlows(cluster: Cluster, nodePositions: Record<string, [number,numb
     }))
 }
 
+function buildFlows(cluster: Cluster, nodePositions: Record<string, [number,number,number]>): Flow[] {
+  const real = buildRealFlows(cluster, nodePositions)
+  return real.length > 0 ? real : buildSyntheticFlows(cluster, nodePositions)
+}
+
 function ShipAnimator() {
   useFrame(({ clock }) => {
     const t = clock.getElapsedTime()
@@ -156,9 +212,8 @@ interface FleetProps {
 }
 
 export const Fleet = memo(function Fleet({ cluster, onSelectNode, showTraffic, showInbound, showHalos, showPodFlow, speedMult, trafficLevel, health, focusNs, selectedNode }: FleetProps) {
-  // Node positions are static — compute once and never again
-  const nodePositionsRef = useRef<Record<string, [number, number, number]> | null>(null)
-  if (!nodePositionsRef.current) {
+  // Recompute positions whenever topology changes (node count/roles change in live mode)
+  const nodePositions = useMemo(() => {
     const totalWorkers = cluster.nodes.filter(n => n.role === 'worker').length
     const scale = fleetScale(totalWorkers)
     const map: Record<string, [number, number, number]> = {}
@@ -168,9 +223,8 @@ export const Fleet = memo(function Fleet({ cluster, onSelectNode, showTraffic, s
       map[node.id] = getPosition(node, isCP ? cpIdx : wIdx, isCP ? cpIdx : wIdx, scale)
       if (isCP) cpIdx++; else wIdx++
     })
-    nodePositionsRef.current = map
-  }
-  const nodePositions = nodePositionsRef.current!
+    return map
+  }, [cluster])
 
   const flows = useMemo<Flow[]>(() => buildFlows(cluster, nodePositions), [nodePositions, cluster])
 

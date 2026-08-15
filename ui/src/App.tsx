@@ -144,6 +144,7 @@ function CoreApp({ clusterData, events, simulation, onToggleMode }: CoreAppProps
 
       <HUD
         cluster={cluster}
+        simulation={simulation}
         showTraffic={showTraffic}
         onToggleTraffic={() => setShowTraffic(v => !v)}
         showInbound={showInbound}

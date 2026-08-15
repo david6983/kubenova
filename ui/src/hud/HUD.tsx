@@ -1,4 +1,4 @@
-import { useRef, useEffect, useMemo, useState } from 'react'
+import { useRef, useEffect, useMemo, useState, useCallback } from 'react'
 import type { Cluster, ClusterNode } from '../types'
 import type { ClusterHealth } from '../scene/Weather'
 import type { SimEvent } from '../mock/useSimulatedCluster'
@@ -39,6 +39,88 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   )
 }
 
+// ─── Cluster selector ─────────────────────────────────────────────────────────
+
+const SERVER = 'http://localhost:3001'
+
+function ClusterSelector({ current, simulation }: { current: string; simulation?: boolean }) {
+  const [contexts, setContexts]   = useState<string[]>([])
+  const [open, setOpen]           = useState(false)
+  const [switching, setSwitching] = useState(false)
+
+  useEffect(() => {
+    if (simulation) return
+    fetch(`${SERVER}/api/contexts`)
+      .then(r => r.json())
+      .then(d => setContexts(d.contexts ?? []))
+      .catch(() => {})
+  }, [simulation])
+
+  const select = useCallback((ctx: string) => {
+    if (ctx === current || switching) return
+    setSwitching(true)
+    setOpen(false)
+    fetch(`${SERVER}/api/context`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ context: ctx }),
+    }).finally(() => setSwitching(false))
+  }, [current, switching])
+
+  if (simulation || contexts.length <= 1) {
+    return <span style={{ color: '#4a7a9a', fontSize: 9, marginLeft: 2 }}>{current}</span>
+  }
+
+  return (
+    <div style={{ position: 'relative', marginLeft: 2 }}>
+      <button
+        onClick={() => setOpen(v => !v)}
+        onMouseDown={e => e.preventDefault()}
+        style={{
+          background: 'none', border: 'none', padding: 0,
+          color: switching ? '#ffc700' : '#4a7a9a',
+          fontSize: 9, cursor: 'pointer', letterSpacing: 0.3,
+          fontFamily: 'inherit',
+          display: 'flex', alignItems: 'center', gap: 4,
+        }}
+      >
+        {switching ? '…' : current} <span style={{ opacity: 0.5 }}>▾</span>
+      </button>
+      {open && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 4px)', left: 0,
+          background: 'rgba(2,8,22,0.97)',
+          border: '1px solid rgba(0,180,255,0.25)',
+          borderRadius: 5, zIndex: 200,
+          minWidth: 180,
+          boxShadow: '0 4px 20px rgba(0,0,0,0.6)',
+        }}>
+          {contexts.map(ctx => (
+            <button
+              key={ctx}
+              onClick={() => select(ctx)}
+              onMouseDown={e => e.preventDefault()}
+              style={{
+                display: 'block', width: '100%', textAlign: 'left',
+                background: ctx === current ? 'rgba(0,180,255,0.12)' : 'transparent',
+                border: 'none',
+                borderBottom: '1px solid rgba(255,255,255,0.06)',
+                padding: '7px 12px',
+                color: ctx === current ? '#00b4ff' : '#7aaabb',
+                fontSize: 9, fontFamily: 'inherit',
+                letterSpacing: 0.3, cursor: 'pointer',
+              }}
+            >
+              {ctx === current && <span style={{ marginRight: 6, color: '#00e87a' }}>●</span>}
+              {ctx}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Top-left: fleet overview ─────────────────────────────────────────────────
 
 const HEALTH_STATUS = {
@@ -47,18 +129,18 @@ const HEALTH_STATUS = {
   critical: { label: 'CRITICAL ALERT',   color: '#ff2200' },
 }
 
-function FleetWidget({ cluster, health }: { cluster: Cluster; health: ClusterHealth }) {
+function FleetWidget({ cluster, health, simulation }: { cluster: Cluster; health: ClusterHealth; simulation?: boolean }) {
   const totalPods = cluster.nodes.reduce((s, n) => s + n.pods.length, 0)
   const cp      = cluster.nodes.filter(n => n.role === 'control-plane').length
   const workers = cluster.nodes.filter(n => n.role === 'worker').length
   const hs = HEALTH_STATUS[health]
 
   return (
-    <Panel style={{ padding: '12px 16px', minWidth: 190 }}>
+    <Panel style={{ padding: '12px 16px', minWidth: 190, pointerEvents: 'auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
         <span style={{ color: '#00b4ff', fontSize: 13, lineHeight: 1 }}>◈</span>
         <span style={{ color: '#deeeff', fontSize: 12, fontWeight: 700, letterSpacing: 1 }}>KUBENOVA</span>
-        <span style={{ color: '#4a7a9a', fontSize: 9, marginLeft: 2 }}>{cluster.name}</span>
+        <ClusterSelector current={cluster.name} simulation={simulation} />
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
         <span style={{
@@ -435,6 +517,7 @@ function BottomBar({
 
 interface HUDProps {
   cluster:          Cluster
+  simulation?:      boolean
   showTraffic:      boolean
   onToggleTraffic:  () => void
   showInbound:      boolean
@@ -455,6 +538,7 @@ interface HUDProps {
 
 export function HUD({
   cluster,
+  simulation,
   showTraffic, onToggleTraffic,
   showInbound, onToggleInbound,
   showHalos, onToggleHalos,
@@ -470,7 +554,7 @@ export function HUD({
     <>
       {/* Top-left */}
       <div style={{ position: 'absolute', top: 16, left: 16, pointerEvents: 'none' }}>
-        <FleetWidget cluster={cluster} health={health} />
+        <FleetWidget cluster={cluster} health={health} simulation={simulation} />
       </div>
 
       {/* Top-right */}

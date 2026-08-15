@@ -23,12 +23,12 @@ jobs:
       matrix:
         include:
           - name: kubenova-ui
-            context: ui
+            context: .
             dockerfile: ui/Dockerfile
             platforms: linux/amd64,linux/arm64
 
           - name: kubenova-server
-            context: ui
+            context: .
             dockerfile: ui/Dockerfile.server
             platforms: linux/amd64,linux/arm64
 

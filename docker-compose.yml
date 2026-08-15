@@ -4,13 +4,13 @@
 ##   docker compose up --build
 ##   open http://localhost:8080
 ##
-## For SIM mode just open http://localhost:5173 after: cd ui && npm run dev
+## For SIM mode just open http://localhost:5173 after: cd ui && pnpm dev
 
 services:
   server:
     build:
-      context: ui
-      dockerfile: Dockerfile.server
+      context: .
+      dockerfile: ui/Dockerfile.server
     environment:
       KUBENOVA_CONTEXT: ${KUBENOVA_CONTEXT:-kind-shopnova-prod}
       NODE_ENV: production
@@ -22,8 +22,8 @@ services:
 
   ui:
     build:
-      context: ui
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ui/Dockerfile
     environment:
       SERVER_HOST: server
       SERVER_PORT: "3001"

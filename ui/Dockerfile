@@ -1,13 +1,18 @@
 ### Stage 1 — build ###
 FROM node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 AS builder
 
+RUN corepack enable && corepack prepare pnpm@10.2.1 --activate
+
 WORKDIR /app
 
-COPY package.json package-lock.json ./
-RUN npm ci --prefer-offline
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY ui/package.json ./ui/package.json
+COPY chaos-agent/package.json ./chaos-agent/package.json
+RUN pnpm install --frozen-lockfile --filter ui...
 
-COPY . .
-RUN npm run build
+COPY ui ./ui
+WORKDIR /app/ui
+RUN pnpm run build
 
 ### Stage 2 — serve ###
 FROM nginx:1.27-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10
@@ -17,8 +22,8 @@ RUN sed -i 's/listen\s*80;/listen 8080;/' /etc/nginx/conf.d/default.conf 2>/dev/
     chown -R nginx:nginx /var/cache/nginx /var/log/nginx /etc/nginx/conf.d && \
     touch /var/run/nginx.pid && chown nginx:nginx /var/run/nginx.pid
 
-COPY --from=builder --chown=nginx:nginx /app/dist /usr/share/nginx/html
-COPY --chown=nginx:nginx nginx.conf /etc/nginx/nginx.conf.template
+COPY --from=builder --chown=nginx:nginx /app/ui/dist /usr/share/nginx/html
+COPY --chown=nginx:nginx ui/nginx.conf /etc/nginx/nginx.conf.template
 
 ENV SERVER_HOST=kubenova-server
 ENV SERVER_PORT=3001

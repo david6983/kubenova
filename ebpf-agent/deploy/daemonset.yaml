@@ -41,10 +41,16 @@ spec:
     metadata:
       labels:
         app: ebpf-agent
+      annotations:
+        container.seccomp.security.alpha.kubernetes.io/ebpf-agent: unconfined
+        io.containerd.runc.v2.seccomp: unconfined
     spec:
       serviceAccountName: ebpf-agent
       hostNetwork: true
       hostPID: true
+      securityContext:
+        seccompProfile:
+          type: Unconfined
       tolerations:
         - operator: Exists
       containers:
@@ -64,6 +70,9 @@ spec:
                   fieldPath: spec.nodeName
           securityContext:
             privileged: true
+            runAsUser: 0
+            seccompProfile:
+              type: Unconfined
             capabilities:
               add:
                 - NET_ADMIN
