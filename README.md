@@ -19,7 +19,7 @@ storm swells when cluster health degrades, and pods explode in the void when the
 </div>
 
 <p align="center">
-  <video src="docs/screenshots/simulator-demo.mp4" autoplay loop muted playsinline width="100%"></video>
+  <img src="docs/screenshots/simulator-demo.gif" alt="KubeNova fleet flying through a live SIM mode run, storm intensity rising and falling with simulated cluster health" width="100%">
 </p>
 
 No dashboards, no graphs to parse — just a living scene you can read at a glance from across
