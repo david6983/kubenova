@@ -13,12 +13,11 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} \
     go build -trimpath -ldflags="-s -w" -o /ebpf-agent .
 
 ### Stage 2 — minimal runtime ###
-FROM debian:bookworm-slim@sha256:abd67ffcfa541b485a3dff59865ab629aa048a6c613e639d36e7456b0b229241
-
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends ca-certificates && \
-    rm -rf /var/lib/apt/lists/* && \
-    useradd -r -u 65532 -g root kubenova
+# distroless/static: the binary is CGO_ENABLED=0 (fully static), so it needs
+# no libc, no shell, no package manager — just CA certs for the k8s API
+# client, which this image already bundles. Cuts out debian's perl-base,
+# libc6, gzip, etc. entirely instead of just not using them.
+FROM gcr.io/distroless/static-debian12:nonroot@sha256:1b7b9f0f0e0a1d2155f531db587cc48ec26aaf97ab64364225f5bf18a054e66a
 
 COPY --from=builder --chown=65532:0 /ebpf-agent /ebpf-agent
 

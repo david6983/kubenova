@@ -1,29 +1,49 @@
-FROM node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293
-
-ARG TARGETARCH=amd64
-ARG KUBECTL_VERSION=v1.30.0
-
-# Install kubectl, then drop curl immediately
-RUN apk add --no-cache curl && \
-    curl -fsSL "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${TARGETARCH}/kubectl" \
-      -o /usr/local/bin/kubectl && \
-    chmod +x /usr/local/bin/kubectl && \
-    apk del curl
-
-# Non-root user
-RUN addgroup -S kubenova && adduser -S -G kubenova kubenova
+### Stage 1 — install server's one dependency (corepack/pnpm never reach the
+### final image). server.js only needs `ws` — ui/package.json's "dependencies"
+### also covers the React/Three.js frontend, so a workspace-filtered install
+### would drag the entire frontend tree (and its CVEs) into this backend
+### image. Installed standalone, pinned to the exact version pnpm-lock.yaml
+### already resolves for the workspace, since `ws` has no dependencies of its
+### own to drift from that lockfile.
+FROM node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 AS deps
 
 RUN corepack enable && corepack prepare pnpm@10.2.1 --activate
 
+WORKDIR /deps
+RUN pnpm add ws@8.21.3
+
+### Stage 2 — fetch + verify kubectl (keeps curl out of the runtime image) ###
+FROM node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 AS kubectl
+
+ARG TARGETARCH=amd64
+ARG KUBECTL_VERSION=v1.36.3
+
+RUN apk add --no-cache curl && \
+    curl -fsSL -o /usr/local/bin/kubectl \
+      "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${TARGETARCH}/kubectl" && \
+    curl -fsSL -o /tmp/kubectl.sha256 \
+      "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${TARGETARCH}/kubectl.sha256" && \
+    echo "$(cat /tmp/kubectl.sha256)  /usr/local/bin/kubectl" | sha256sum -c - && \
+    chmod +x /usr/local/bin/kubectl
+
+### Stage 3 — minimal non-root runtime ###
+FROM node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293
+
+# Pull latest Alpine security patches, then drop npm/corepack/npx — the
+# server only ever runs `node server.js`, and npm/corepack drag in their own
+# bundled deps (tar, minimatch, glob, sigstore, ...) that show up as CVEs
+# despite never being used at runtime.
+RUN apk update && apk upgrade --no-cache && \
+    rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
+      /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack
+
+RUN addgroup -S kubenova && adduser -S -G kubenova kubenova
+
+COPY --from=kubectl /usr/local/bin/kubectl /usr/local/bin/kubectl
+
 WORKDIR /app
-
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
-COPY ui/package.json ./ui/package.json
-COPY chaos-agent/package.json ./chaos-agent/package.json
-RUN pnpm install --frozen-lockfile --filter ui --prod
-
+COPY --from=deps --chown=kubenova:kubenova /deps/node_modules ./ui/node_modules
 COPY --chown=kubenova:kubenova ui/server.js ./ui/server.js
-RUN chown -R kubenova:kubenova /app
 
 WORKDIR /app/ui
 

@@ -15,7 +15,10 @@ WORKDIR /app/ui
 RUN pnpm run build
 
 ### Stage 2 — serve ###
-FROM nginx:1.27-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10
+FROM nginx:1.29-alpine-slim@sha256:c9366b8c560169b101ca0e5422ed063b20779e6454c2326b9c9704225c9b0c08
+
+# Pull latest Alpine security patches for the packages nginx:alpine ships with
+RUN apk update && apk upgrade --no-cache
 
 # Run as the built-in nginx user (uid 101) — no root needed for port 8080
 RUN sed -i 's/listen\s*80;/listen 8080;/' /etc/nginx/conf.d/default.conf 2>/dev/null || true && \

@@ -81,27 +81,32 @@ situational awareness a cluster deserves too.
   </tr>
 </table>
 
-In LIVE mode, that view is a direct read of your real cluster — the fleet above maps one-to-one
-onto ordinary `kubectl` output:
+Those screenshots are the bundled `shopnova-prod` demo cluster (Option 2C below) — the same
+`production` / `payments` / `search` / `ml` / `data` / `messaging` / `monitoring` / `security` /
+`gateway` namespaces you see in the squadron list, straight off `kubectl`:
 
 ```bash
 $ kubectl get nodes
-NAME                STATUS   ROLES           AGE   VERSION
-dev-control-plane   Ready    control-plane   21h   v1.36.1
-dev-worker          Ready    <none>          21h   v1.36.1
-dev-worker2         Ready    <none>          21h   v1.36.1
+NAME                          STATUS   ROLES           AGE   VERSION
+shopnova-prod-control-plane   Ready    control-plane   4m    v1.36.1
+shopnova-prod-worker          Ready    <none>          3m    v1.36.1
+shopnova-prod-worker2         Ready    <none>          3m    v1.36.1
+shopnova-prod-worker3         Ready    <none>          3m    v1.36.1
+shopnova-prod-worker4         Ready    <none>          3m    v1.36.1
 
-$ kubectl get pods -n app
-NAME                          READY   STATUS    RESTARTS   AGE
-api-56f8c69fd7-n66xc          1/1     Running   0          19h
-api-56f8c69fd7-wmxlt          1/1     Running   0          19h
-traffic-gen-ff8566c5b-l27pv   1/1     Running   0          20h
-worker-785fc649f7-6gkqz       1/1     Running   0          19h
-worker-785fc649f7-w5vrv       1/1     Running   0          19h
+$ kubectl get pods -n production
+NAME                               READY   STATUS    RESTARTS   AGE
+fulfillment-svc-55975fc5f8-cmd9b   1/1     Running   0          84s
+order-service-6cf999dfcd-gvpmt     1/1     Running   0          85s
+order-worker-65b86b8d6b-rtrdx      1/1     Running   0          85s
+product-catalog-584cdd8bc8-5m9jj   1/1     Running   0          85s
+shop-api-fccc88fb6-ghrkj           1/1     Running   0          85s
+traffic-gen-78ddfc66d9-qxmx5       1/1     Running   0          84s
+user-auth-85c4b8868b-6pllc         1/1     Running   0          85s
 ```
 
-Three nodes become three capital ships; each `Running` pod becomes a fighter craft in that
-ship's squadron. No mapping to configure — KubeNova reads it straight off the API.
+Five nodes become five capital ships; each `Running` pod becomes a fighter craft in that ship's
+squadron, grouped by namespace. No mapping to configure — KubeNova reads it straight off the API.
 
 ## 🚀 Quick Start
 
